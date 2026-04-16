@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/usememos/memogram"
+	"github.com/usememos/memogram/internal/memogram"
 )
 
 func main() {

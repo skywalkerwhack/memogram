@@ -18,7 +18,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/usememos/memogram/store"
+	"github.com/usememos/memogram/internal/memogram/store"
 	v1pb "github.com/usememos/memos/proto/gen/api/v1"
 	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"
 )
