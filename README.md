@@ -1,39 +1,40 @@
 # Memogram
 
-Memogram connects a Telegram bot to your Memos instance. Send text, photos, or
-documents to the bot and Memogram saves them as memos with optional attachments.
+Memogram is a Telegram bot for saving messages into a
+[Memos](https://www.usememos.com/) instance. Send the bot text, photos, voice
+messages, videos, or documents, and it creates a memo with any supported files
+attached.
 
-## Features
+## What It Does
 
-- Save Telegram text messages as Memos notes.
-- Upload Telegram photos and documents as memo resources.
-- Link each Telegram user to Memos with their own access token.
-- Search your saved memos from Telegram.
-- Restrict bot access to selected Telegram usernames.
-- Check bot, backend, and account status with `/status`.
+- Saves Telegram messages as Memos notes.
+- Uploads photos, voice messages, videos, and documents as memo attachments.
+- Preserves supported Telegram text formatting in memo content.
+- Adds source information for forwarded messages when Telegram provides it.
+- Lets each Telegram user connect with their own Memos access token.
+- Searches saved memos from Telegram.
+- Restricts bot usage to selected Telegram usernames when configured.
+- Reports bot, storage, backend, and account status with `/status`.
+- Provides inline actions to make a memo public or private, and to toggle pinning.
 
 ## Requirements
 
-- A running [Memos](https://www.usememos.com/) instance.
+- A running Memos instance.
 - A Telegram bot token from [BotFather](https://t.me/BotFather).
-- Go 1.25 or Docker, depending on how you want to run Memogram.
-
-## Installation
-
-Download a prebuilt archive from the
-[Releases](https://github.com/usememos/memogram/releases) page, or build the
-service from source:
-
-```sh
-go build -o build/memogram ./cmd/memogram
-```
+- Go 1.25 or Docker.
 
 ## Configuration
 
-Memogram reads configuration from environment variables. If a `.env` file exists
-in the working directory, it is loaded automatically.
+Memogram reads configuration from environment variables. When a `.env` file is
+present in the working directory, it is loaded automatically.
 
-Create a `.env` file:
+Start from the example file:
+
+```sh
+cp .env.example .env
+```
+
+Then edit `.env`:
 
 ```env
 SERVER_ADDR=dns:localhost:5230
@@ -45,41 +46,54 @@ ALLOWED_USERNAMES=
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `SERVER_ADDR` | Yes | Memos server address. Values such as `localhost:5230`, `dns:localhost:5230`, `http://localhost:5230`, and `https://memos.example.com` are accepted. |
+| `SERVER_ADDR` | Yes | Memos server address. `localhost:5230`, `dns:localhost:5230`, `http://localhost:5230`, and `https://memos.example.com` are supported. Addresses without `http://` or `https://` use `http://`. |
 | `BOT_TOKEN` | Yes | Telegram bot token. |
-| `BOT_PROXY_ADDR` | No | Custom Telegram API server URL, useful when routing bot traffic through a proxy. |
-| `DATA` | No | Local file used to store Telegram user access tokens. Defaults to `data.txt`. |
-| `ALLOWED_USERNAMES` | No | Comma-separated Telegram usernames allowed to use the bot, without `@`. Leave empty to allow any user. |
+| `BOT_PROXY_ADDR` | No | Custom Telegram Bot API server URL. |
+| `DATA` | No | File used to store Telegram user access tokens. Defaults to `data.txt`. The file is created automatically if it does not exist. |
+| `ALLOWED_USERNAMES` | No | Comma-separated Telegram usernames allowed to use the bot, without `@`. Leave empty to allow any Telegram user. |
 
 ### Access Control
 
-Set `ALLOWED_USERNAMES` to limit who can use the bot:
+Use `ALLOWED_USERNAMES` to limit who can use the bot:
 
 ```env
 ALLOWED_USERNAMES=alex,john,emily
 ```
 
-Matching is case-insensitive and trims whitespace. Usernames must not include
-the `@` prefix. When this option is set, Telegram accounts without a username
-cannot use the bot.
+Matching is case-insensitive and surrounding whitespace is ignored. Do not
+include the `@` prefix. When this setting is used, Telegram accounts without a
+username cannot use the bot.
 
-## Running
+## Run
 
 ### Binary
 
-Place `.env` next to the binary, then start the service:
+Build Memogram:
 
 ```sh
-./memogram
+go build -o build/memogram ./cmd/memogram
 ```
+
+Run it from the directory containing `.env`:
+
+```sh
+./build/memogram
+```
+
+You can also download a prebuilt archive from the
+[Releases](https://github.com/usememos/memogram/releases) page.
 
 ### Docker
 
-Build and run the image:
+Build the image:
 
 ```sh
 docker build -t memogram .
+```
 
+Run the container:
+
+```sh
 docker run -d --name memogram \
   -e SERVER_ADDR=dns:localhost:5230 \
   -e BOT_TOKEN=your_telegram_bot_token \
@@ -87,13 +101,11 @@ docker run -d --name memogram \
   memogram
 ```
 
-Add optional variables such as `BOT_PROXY_ADDR` and `ALLOWED_USERNAMES` as
-needed.
+Add `BOT_PROXY_ADDR` or `ALLOWED_USERNAMES` if your deployment needs them. Mount
+a volume for `/app/data.txt` if you want linked Telegram accounts to survive
+container replacement.
 
 ### Docker Compose
-
-Use Compose when running Memogram next to Memos or when you want to keep
-configuration in an env file:
 
 ```yaml
 services:
@@ -104,7 +116,7 @@ services:
     restart: unless-stopped
 ```
 
-Start it with:
+Start it:
 
 ```sh
 docker compose up -d
@@ -112,24 +124,26 @@ docker compose up -d
 
 ## Bot Usage
 
-First, link your Telegram account to Memos:
+Connect your Telegram account to Memos:
 
 ```text
 /start <memos_access_token>
 ```
 
-After linking, you can use:
+After the account is connected:
 
-| Action | Result |
+| Telegram action | Result |
 | --- | --- |
-| Send a text message | Creates a memo with the message content. |
-| Send a photo or document | Creates a memo and uploads the file as an attachment. |
+| Send text | Creates a memo with that text. |
+| Send a photo, voice message, video, or document | Creates a memo and uploads the file as an attachment. |
+| Send a captioned file | Uses the caption as memo content and attaches the file. |
+| Forward a message | Adds forwarded-source information when available. |
 | `/search <words>` | Searches your memos and returns up to 10 matches. |
-| `/status` | Shows server, data file, backend latency, access control, and account link status. |
+| `/status` | Shows bot, backend, storage, access-control, and account-link status. |
 | `/ping` | Replies with `Pong!`. |
 
-After a memo is created, the bot shows inline actions for changing visibility or
-toggling the memo's pinned state.
+When a memo is created, Memogram replies with a link to the memo and inline
+buttons for changing visibility or pinning.
 
 ## Development
 
@@ -139,16 +153,20 @@ Run tests:
 go test ./...
 ```
 
-Build the default local binary:
+Build a local binary:
 
 ```sh
 go build -o build/memogram ./cmd/memogram
 ```
 
-Build the FreeBSD amd64 release binary:
+Build the FreeBSD amd64 binary used by the helper script:
 
 ```sh
 ./scripts/build.sh
 ```
 
-The FreeBSD build is written to `build/memogram-freebsd-amd64`.
+The helper writes `build/memogram-freebsd-amd64`.
+
+## License
+
+Memogram is distributed under the license in [COPYING](COPYING).
