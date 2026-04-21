@@ -13,7 +13,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 )
 
-require connectrpc.com/connect v1.19.1
+require connectrpc.com/connect v1.19.2
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
