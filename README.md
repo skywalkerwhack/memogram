@@ -177,13 +177,19 @@ Build a local binary:
 go build -o build/memogram ./cmd/memogram
 ```
 
-Build the FreeBSD amd64 binary used by the helper script:
+Build the default cross-platform binaries:
 
 ```sh
 ./scripts/build.sh
 ```
 
-The helper writes `build/memogram-freebsd-amd64`.
+By default, the helper writes `build/memogram-linux-amd64` and
+`build/memogram-freebsd-amd64`. Set `TARGETS` to choose other Go
+`GOOS/GOARCH` pairs:
+
+```sh
+TARGETS="linux/amd64 linux/arm64 freebsd/amd64" ./scripts/build.sh
+```
 
 ## License
 
