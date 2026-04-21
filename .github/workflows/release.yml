@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Existing tag to release, for example v1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build binaries
+        env:
+          TARGETS: >-
+            linux/amd64
+            linux/arm64
+            freebsd/amd64
+            freebsd/arm64
+            windows/amd64
+            darwin/amd64
+            darwin/arm64
+        run: ./scripts/build.sh
+
+      - name: Package artifacts
+        run: |
+          set -eu
+          mkdir -p dist
+
+          for artifact in build/memogram-*; do
+            name=$(basename "$artifact")
+
+            case "$name" in
+              *.exe)
+                archive="${name%.exe}.zip"
+                (cd build && zip "../dist/$archive" "$name")
+                ;;
+              *)
+                archive="$name.tar.gz"
+                tar -C build -czf "dist/$archive" "$name"
+                ;;
+            esac
+          done
+
+          (cd dist && sha256sum * > checksums.txt)
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name, '-') }}
