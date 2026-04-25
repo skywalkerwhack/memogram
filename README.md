@@ -150,9 +150,9 @@ Set these GitHub repository secrets before using it:
 - `DOCKERHUB_USERNAME`: your Docker Hub username.
 - `DOCKERHUB_TOKEN`: a Docker Hub access token with permission to push images.
 
-The workflow pushes `skywalkerwhack/memogram:<tag>` for every release tag. For
-stable tags without a prerelease suffix, it also updates
-`skywalkerwhack/memogram:latest`.
+The workflow pushes `${DOCKERHUB_USERNAME}/memogram:<tag>` for every release
+tag. For stable tags without a prerelease suffix, it also updates
+`${DOCKERHUB_USERNAME}/memogram:latest`.
 
 ## Bot Usage
 

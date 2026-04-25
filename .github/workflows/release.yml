@@ -61,7 +61,7 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@v5
         with:
-          images: skywalkerwhack/memogram
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/memogram
           tags: |
             type=raw,value=${{ env.RELEASE_TAG }}
             type=raw,value=latest,enable=${{ !contains(env.RELEASE_TAG, '-') }}
