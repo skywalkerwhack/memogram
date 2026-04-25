@@ -23,6 +23,12 @@ Memogram is a Telegram bot for saving messages into a
 messages, videos, or documents, and it creates a memo with any supported files
 attached.
 
+## Project Origin
+
+This repository is essentially a fork of
+[usememos/telegram-integration](https://github.com/usememos/telegram-integration),
+adapted and continued here as Memogram.
+
 ## What It Does
 
 - Saves Telegram messages as Memos notes.
