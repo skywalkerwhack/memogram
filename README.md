@@ -5,7 +5,6 @@
       + [Run with Docker](#run-with-docker)
       + [Run with Go](#run-with-go)
    * [Configuration](#configuration)
-      + [Restrict access to specific Telegram users](#restrict-access-to-specific-telegram-users)
    * [Using the Bot](#using-the-bot)
       + [1. Link a Telegram account](#1-link-a-telegram-account)
       + [2. Save content](#2-save-content)
@@ -54,8 +53,10 @@ Keep this token private. Anyone with the token can act as that Memos user.
 docker run -d --name memogram \
   -e SERVER_ADDR=http://host.docker.internal:5230 \
   -e BOT_TOKEN=your_telegram_bot_token \
+  -e BOT_PROXY_ADDR=your_bot_proxy_addr \ # OPTIONAL
   -e DATA=/app/data/data.txt \ # NO NEED TO CHANGE THIS
   -v memogram-data:/app/data \ # NO NEED TO CHANGE THIS
+  -e ALLOWED_USERNAMES= \ # OPTIONAL
   conch0601/memogram
 ```
 
@@ -63,6 +64,7 @@ Replace:
 
 - `SERVER_ADDR` with the address of your Memos instance.
 - `BOT_TOKEN` with the token from BotFather.
+- `ALLOWED_USERNAMES` with Comma-separated Telegram usernames allowed to use the bot, without `@`. Leave empty to allow any Telegram user. 
 - `conch0601/memogram` with your published image name if you build and publish
   your own fork.
 
@@ -113,19 +115,6 @@ Security note:
 - `DATA` contains Telegram user IDs and Memos access tokens.
 - Do not commit it to git or expose it in backups, logs, or shared volumes.
 
-### Restrict access to specific Telegram users
-
-```env
-ALLOWED_USERNAMES=alex,john,emily
-```
-
-Rules:
-
-- Matching is case-insensitive.
-- Surrounding whitespace is ignored.
-- Do not include `@`.
-- If this setting is used, Telegram accounts without a username cannot use the
-  bot.
 
 ## Using the Bot
 
