@@ -51,6 +51,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+          cache-dependency-path: go.sum
 
       - name: Run tests
         run: go test ./...
@@ -95,6 +96,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+          cache-dependency-path: go.sum
 
       - name: Build binary
         env:
@@ -166,8 +168,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=memogram-image
+          cache-to: type=gha,mode=max,scope=memogram-image
 
   release:
     name: Create GitHub release
