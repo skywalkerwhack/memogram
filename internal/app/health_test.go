@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/usememos/memogram/internal/domain"
+	"github.com/skywalkerwhack/memogram/internal/domain"
 )
 
 type testBackend struct {

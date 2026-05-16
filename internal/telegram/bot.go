@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/usememos/memogram/internal/config"
+	"github.com/skywalkerwhack/memogram/internal/config"
 )
 
 type Bot struct {

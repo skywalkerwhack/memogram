@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"connectrpc.com/connect"
-	"github.com/usememos/memogram/internal/domain"
+	"github.com/skywalkerwhack/memogram/internal/domain"
 	v1pb "github.com/usememos/memos/proto/gen/api/v1"
 	"github.com/usememos/memos/proto/gen/api/v1/apiv1connect"
 	fieldmaskpb "google.golang.org/protobuf/types/known/fieldmaskpb"

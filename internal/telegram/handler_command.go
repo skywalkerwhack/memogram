@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/usememos/memogram/internal/app"
-	"github.com/usememos/memogram/internal/domain"
+	"github.com/skywalkerwhack/memogram/internal/app"
+	"github.com/skywalkerwhack/memogram/internal/domain"
 )
 
 const (

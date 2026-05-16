@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/usememos/memogram/internal/domain"
+	"github.com/skywalkerwhack/memogram/internal/domain"
 )
 
 type Service struct {

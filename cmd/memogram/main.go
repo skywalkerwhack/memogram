@@ -21,11 +21,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/usememos/memogram/internal/app"
-	"github.com/usememos/memogram/internal/config"
-	"github.com/usememos/memogram/internal/memos"
-	"github.com/usememos/memogram/internal/store"
-	"github.com/usememos/memogram/internal/telegram"
+	"github.com/skywalkerwhack/memogram/internal/app"
+	"github.com/skywalkerwhack/memogram/internal/config"
+	"github.com/skywalkerwhack/memogram/internal/memos"
+	"github.com/skywalkerwhack/memogram/internal/store"
+	"github.com/skywalkerwhack/memogram/internal/telegram"
 )
 
 func main() {

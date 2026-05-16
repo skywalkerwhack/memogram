@@ -220,7 +220,7 @@ TARGETS="linux/amd64 linux/arm64 freebsd/amd64" ./scripts/build.sh
 ## Releases
 
 Prebuilt archives are available from
-[GitHub Releases](https://github.com/usememos/memogram/releases).
+[GitHub Releases](https://github.com/skywalkerwhack/memogram/releases).
 
 The release workflow can also publish Docker images for tags such as
 `v1.2.3` or `v1.2.3-rc1`.

@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/usememos/memogram/internal/domain"
+	"github.com/skywalkerwhack/memogram/internal/domain"
 )
 
 type TokenStore interface {

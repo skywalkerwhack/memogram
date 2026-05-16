@@ -3,8 +3,8 @@ package telegram
 import (
 	"context"
 
-	"github.com/usememos/memogram/internal/app"
-	"github.com/usememos/memogram/internal/domain"
+	"github.com/skywalkerwhack/memogram/internal/app"
+	"github.com/skywalkerwhack/memogram/internal/domain"
 )
 
 type Service interface {

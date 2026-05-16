@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-telegram/bot/models"
-	"github.com/usememos/memogram/internal/domain"
+	"github.com/skywalkerwhack/memogram/internal/domain"
 )
 
 func keyboard(memo *domain.Memo) *models.InlineKeyboardMarkup {

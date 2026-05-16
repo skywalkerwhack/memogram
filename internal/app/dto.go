@@ -3,7 +3,7 @@ package app
 import (
 	"time"
 
-	"github.com/usememos/memogram/internal/domain"
+	"github.com/skywalkerwhack/memogram/internal/domain"
 )
 
 type CreateMemoInput struct {
