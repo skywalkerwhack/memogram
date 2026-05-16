@@ -1,11 +1,9 @@
 services:
   memogram:
-    build:
-      context: .
+    image: your-dockerhub-username/memogram:latest
     container_name: memogram
+    env_file: .env
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       DATA: /app/data/data.txt
     volumes:
