@@ -1,10 +1,9 @@
-name: CI
+name: Main
 
 on:
   push:
     branches:
       - main
-  pull_request:
 
 permissions:
   contents: read
@@ -30,7 +29,6 @@ jobs:
   docker-cache:
     name: Warm Docker cache
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
