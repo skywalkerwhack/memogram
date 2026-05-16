@@ -55,6 +55,8 @@ type Service struct {
 
 const (
 	commandStart  = "/start"
+	commandHelp   = "/help"
+	commandUnlink = "/unlink"
 	commandSearch = "/search"
 	commandStatus = "/status"
 	commandPing   = "/ping"
@@ -126,6 +128,14 @@ func (s *Service) Start(ctx context.Context) {
 		{
 			Command:     "start",
 			Description: "Start the bot with access token",
+		},
+		{
+			Command:     "help",
+			Description: "Show available commands",
+		},
+		{
+			Command:     "unlink",
+			Description: "Disconnect your linked account",
 		},
 		{
 			Command:     "search",
@@ -216,6 +226,12 @@ func (s *Service) handler(ctx context.Context, b *bot.Bot, m *models.Update) {
 	message := m.Message
 	if strings.HasPrefix(message.Text, commandStart+" ") || message.Text == commandStart {
 		s.startHandler(ctx, b, m)
+		return
+	} else if strings.HasPrefix(message.Text, commandHelp+" ") || message.Text == commandHelp {
+		s.helpHandler(ctx, b, m)
+		return
+	} else if strings.HasPrefix(message.Text, commandUnlink+" ") || message.Text == commandUnlink {
+		s.unlinkHandler(ctx, b, m)
 		return
 	} else if strings.HasPrefix(message.Text, commandSearch+" ") || message.Text == commandSearch {
 		s.searchHandler(ctx, b, m)
@@ -374,6 +390,41 @@ func (s *Service) startHandler(ctx context.Context, b *bot.Bot, m *models.Update
 	})
 }
 
+func (s *Service) helpHandler(ctx context.Context, b *bot.Bot, m *models.Update) {
+	lines := []string{
+		"Memogram commands",
+		"/start <access_token> - link this Telegram account to Memos",
+		"/unlink - remove the saved Memos token for this Telegram account",
+		"/search <words> - search your saved memos",
+		"/status - show bot and account status",
+		"/ping - check whether the bot is alive",
+		"/help - show this help message",
+		"",
+		"Send text, photos, voice messages, videos, or documents to save them as memos.",
+	}
+
+	b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: m.Message.Chat.ID,
+		Text:   strings.Join(lines, "\n"),
+	})
+}
+
+func (s *Service) unlinkHandler(ctx context.Context, b *bot.Bot, m *models.Update) {
+	userID := m.Message.From.ID
+	if !s.store.DeleteUserAccessToken(userID) {
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: m.Message.Chat.ID,
+			Text:   "No linked Memos account was found for this Telegram account.",
+		})
+		return
+	}
+
+	b.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: m.Message.Chat.ID,
+		Text:   "Your Memos account has been disconnected. Use /start <access_token> to link it again.",
+	})
+}
+
 func (s *Service) keyboard(memo *v1pb.Memo) *models.InlineKeyboardMarkup {
 	// add inline keyboard to edit memo's visibility or pinned status.
 	return &models.InlineKeyboardMarkup{
@@ -390,6 +441,12 @@ func (s *Service) keyboard(memo *v1pb.Memo) *models.InlineKeyboardMarkup {
 				{
 					Text:         "Pin",
 					CallbackData: fmt.Sprintf("pin %s", memo.Name),
+				},
+			},
+			{
+				{
+					Text:         "Delete",
+					CallbackData: fmt.Sprintf("delete %s", memo.Name),
 				},
 			},
 		},
@@ -411,7 +468,7 @@ func (s *Service) callbackQueryHandler(ctx context.Context, b *bot.Bot, update *
 
 	authClient := s.client.NewAuthenticatedClient(accessToken)
 
-	parts := strings.Split(callbackData, " ")
+	parts := strings.SplitN(callbackData, " ", 2)
 	if len(parts) != 2 {
 		b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 			CallbackQueryID: update.CallbackQuery.ID,
@@ -422,6 +479,32 @@ func (s *Service) callbackQueryHandler(ctx context.Context, b *bot.Bot, update *
 	}
 	slog.Info("parts", slog.Any("parts", parts))
 	action, memoName := parts[0], parts[1]
+
+	if action == "delete" {
+		if _, err := authClient.MemoService.DeleteMemo(ctx, connect.NewRequest(&v1pb.DeleteMemoRequest{
+			Name:  memoName,
+			Force: true,
+		})); err != nil {
+			slog.Error("failed to delete memo", slog.Any("err", err))
+			b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+				CallbackQueryID: update.CallbackQuery.ID,
+				Text:            "Failed to delete memo",
+				ShowAlert:       true,
+			})
+			return
+		}
+
+		b.EditMessageText(ctx, &bot.EditMessageTextParams{
+			ChatID:    update.CallbackQuery.Message.Message.Chat.ID,
+			MessageID: update.CallbackQuery.Message.Message.ID,
+			Text:      fmt.Sprintf("Memo deleted: %s", memoName),
+		})
+		b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: update.CallbackQuery.ID,
+			Text:            "Memo deleted",
+		})
+		return
+	}
 
 	resp, err := authClient.MemoService.GetMemo(ctx, connect.NewRequest(&v1pb.GetMemoRequest{
 		Name: memoName,

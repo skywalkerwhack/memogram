@@ -57,3 +57,39 @@ func TestSaveAndLoadUserAccessTokens(t *testing.T) {
 		t.Fatalf("expected token:two for user 7, got %q", token)
 	}
 }
+
+func TestDeleteUserAccessToken(t *testing.T) {
+	dataPath := filepath.Join(t.TempDir(), "data.txt")
+
+	store := NewStore(dataPath)
+	if err := store.Init(); err != nil {
+		t.Fatalf("init store: %v", err)
+	}
+
+	store.SetUserAccessToken(42, "token-one")
+	store.SetUserAccessToken(7, "token-two")
+
+	if ok := store.DeleteUserAccessToken(42); !ok {
+		t.Fatal("expected delete to report existing user")
+	}
+	if _, ok := store.GetUserAccessToken(42); ok {
+		t.Fatal("expected user 42 token to be removed from cache")
+	}
+
+	reloaded := NewStore(dataPath)
+	if err := reloaded.Init(); err != nil {
+		t.Fatalf("init reloaded store: %v", err)
+	}
+
+	if _, ok := reloaded.GetUserAccessToken(42); ok {
+		t.Fatal("expected user 42 token to be removed from file")
+	}
+	token, ok := reloaded.GetUserAccessToken(7)
+	if !ok || token != "token-two" {
+		t.Fatalf("expected remaining token for user 7, got %q", token)
+	}
+
+	if ok := store.DeleteUserAccessToken(999); ok {
+		t.Fatal("expected delete to report missing user")
+	}
+}

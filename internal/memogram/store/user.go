@@ -44,6 +44,18 @@ func (s *Store) SetUserAccessToken(userID int64, accessToken string) {
 	}
 }
 
+// DeleteUserAccessToken removes the access token for the user.
+func (s *Store) DeleteUserAccessToken(userID int64) bool {
+	_, existed := s.userAccessTokenCache.LoadAndDelete(userID)
+	if !existed {
+		return false
+	}
+	if err := s.SaveUserAccessTokenMapToFile(); err != nil {
+		slog.Error("failed to save user access token map to file", "error", err)
+	}
+	return true
+}
+
 // SaveUserAccessTokenMapToFile saves the user access token map to a data file.
 func (s *Store) SaveUserAccessTokenMapToFile() error {
 	entries := s.snapshotAccessTokens()
