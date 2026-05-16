@@ -1,3 +1,21 @@
+- [Memogram](#memogram)
+   * [What It Looks Like](#what-it-looks-like)
+   * [Features](#features)
+   * [Requirements](#requirements)
+   * [Quick Start](#quick-start)
+      + [Get a Memos Access Token](#get-a-memos-access-token)
+      + [Run with Docker](#run-with-docker)
+      + [Run with Go](#run-with-go)
+   * [Configuration](#configuration)
+      + [Restrict access to specific Telegram users](#restrict-access-to-specific-telegram-users)
+   * [Using the Bot](#using-the-bot)
+      + [1. Link a Telegram account](#1-link-a-telegram-account)
+      + [2. Save content](#2-save-content)
+      + [3. Use commands](#3-use-commands)
+   * [Use an env file](#use-an-env-file)
+   * [Development](#development)
+   * [Releases](#releases)
+   * [License](#license)
 # Memogram
 
 Memogram is a Telegram bot for saving Telegram messages to a
