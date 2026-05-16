@@ -1,19 +1,3 @@
-// memogram is a Telegram bot for saving messages into a Memos instance.
-// Copyright (C) 2026  skywalkerwhack
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 package store
 
 import (
@@ -34,16 +18,20 @@ func TestParseLine(t *testing.T) {
 func TestSaveAndLoadUserAccessTokens(t *testing.T) {
 	dataPath := filepath.Join(t.TempDir(), "data.txt")
 
-	store := NewStore(dataPath)
-	if err := store.Init(); err != nil {
+	store, err := NewFileTokenStore(dataPath)
+	if err != nil {
 		t.Fatalf("init store: %v", err)
 	}
 
-	store.SetUserAccessToken(42, "token-one")
-	store.SetUserAccessToken(7, "token:two")
+	if err := store.SetUserAccessToken(42, "token-one"); err != nil {
+		t.Fatalf("set token-one: %v", err)
+	}
+	if err := store.SetUserAccessToken(7, "token:two"); err != nil {
+		t.Fatalf("set token:two: %v", err)
+	}
 
-	reloaded := NewStore(dataPath)
-	if err := reloaded.Init(); err != nil {
+	reloaded, err := NewFileTokenStore(dataPath)
+	if err != nil {
 		t.Fatalf("init reloaded store: %v", err)
 	}
 
@@ -61,23 +49,31 @@ func TestSaveAndLoadUserAccessTokens(t *testing.T) {
 func TestDeleteUserAccessToken(t *testing.T) {
 	dataPath := filepath.Join(t.TempDir(), "data.txt")
 
-	store := NewStore(dataPath)
-	if err := store.Init(); err != nil {
+	store, err := NewFileTokenStore(dataPath)
+	if err != nil {
 		t.Fatalf("init store: %v", err)
 	}
 
-	store.SetUserAccessToken(42, "token-one")
-	store.SetUserAccessToken(7, "token-two")
+	if err := store.SetUserAccessToken(42, "token-one"); err != nil {
+		t.Fatalf("set token-one: %v", err)
+	}
+	if err := store.SetUserAccessToken(7, "token-two"); err != nil {
+		t.Fatalf("set token-two: %v", err)
+	}
 
-	if ok := store.DeleteUserAccessToken(42); !ok {
+	ok, err := store.DeleteUserAccessToken(42)
+	if err != nil {
+		t.Fatalf("delete user 42: %v", err)
+	}
+	if !ok {
 		t.Fatal("expected delete to report existing user")
 	}
 	if _, ok := store.GetUserAccessToken(42); ok {
 		t.Fatal("expected user 42 token to be removed from cache")
 	}
 
-	reloaded := NewStore(dataPath)
-	if err := reloaded.Init(); err != nil {
+	reloaded, err := NewFileTokenStore(dataPath)
+	if err != nil {
 		t.Fatalf("init reloaded store: %v", err)
 	}
 
@@ -89,7 +85,11 @@ func TestDeleteUserAccessToken(t *testing.T) {
 		t.Fatalf("expected remaining token for user 7, got %q", token)
 	}
 
-	if ok := store.DeleteUserAccessToken(999); ok {
+	ok, err = store.DeleteUserAccessToken(999)
+	if err != nil {
+		t.Fatalf("delete user 999: %v", err)
+	}
+	if ok {
 		t.Fatal("expected delete to report missing user")
 	}
 }

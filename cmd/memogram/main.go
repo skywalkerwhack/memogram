@@ -18,15 +18,35 @@ package main
 
 import (
 	"context"
+	"log"
+	"net/http"
 
-	"github.com/usememos/memogram/internal/memogram"
+	"github.com/usememos/memogram/internal/app"
+	"github.com/usememos/memogram/internal/config"
+	"github.com/usememos/memogram/internal/memos"
+	"github.com/usememos/memogram/internal/store"
+	"github.com/usememos/memogram/internal/telegram"
 )
 
 func main() {
 	ctx := context.Background()
-	service, err := memogram.NewService()
+	cfg, err := config.Load()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	service.Start(ctx)
+
+	tokenStore, err := store.NewFileTokenStore(cfg.Data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	backend := memos.NewBackend(cfg.ServerAddr, http.DefaultClient)
+	service := app.NewService(backend, tokenStore, cfg.AllowedUsernames)
+
+	tgBot, err := telegram.NewBot(cfg, service)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tgBot.Start(ctx)
 }
