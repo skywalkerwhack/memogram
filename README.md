@@ -1,179 +1,156 @@
-- [Memogram](#memogram)
-   * [Requirements](#requirements)
-   * [Quick Start](#quick-start)
-      + [Get a Memos Access Token](#get-a-memos-access-token)
-      + [Run with Docker](#run-with-docker)
-      + [Run with Go](#run-with-go)
-   * [Configuration](#configuration)
-   * [Using the Bot](#using-the-bot)
-      + [1. Link a Telegram account](#1-link-a-telegram-account)
-      + [2. Save content](#2-save-content)
-      + [3. Use commands](#3-use-commands)
-   * [Use an env file](#use-an-env-file)
-   * [License](#license)
-# Memogram
+# memogram
 
-Memogram is a Telegram bot for saving Telegram messages to a
-[Memos](https://www.usememos.com/) instance.
+`memogram` is a Telegram bot that saves messages into your [Memos](https://www.usememos.com/) instance.
 
-Send the bot a message, photo, voice message, video, or document and it will
-create a memo in Memos. After saving, the bot replies with a link to the memo
-and buttons for changing visibility or pinning it.
+It is designed for a simple workflow:
 
-This project continues the work from
-[usememos/telegram-integration](https://github.com/usememos/telegram-integration)
-as a standalone bot.
+- send text to the bot and it becomes a memo
+- send photos, documents, voice messages, or videos and they are attached to that memo
+- forward messages from Telegram and the original sender is noted in the memo
+- search your saved memos from Telegram
+- change memo visibility, pin, or delete a memo from inline buttons
 
+## What It Does
+
+After you link your Telegram account to a Memos access token, you can use the bot as a personal capture inbox.
+
+Supported Telegram actions:
+
+- plain text messages
+- captions on media
+- documents
+- photos
+- voice messages
+- videos
+- forwarded messages
+
+Supported bot commands:
+
+- `/start <access_token>`: link your Telegram account to Memos
+- `/help`: show help
+- `/search <words>`: search your memos
+- `/status`: show bot and account status
+- `/unlink`: remove the saved Memos token for your Telegram account
+- `/ping`: quick health check
+
+## How It Works
+
+`memogram` connects to:
+
+- Telegram Bot API
+- your Memos server API
+
+Each Telegram user links their own Memos access token with `/start <access_token>`. The bot stores that token in a local data file so later messages can be saved to the correct Memos account.
 
 ## Requirements
 
-You need:
-
-- A running Memos instance.
-- A Telegram bot token from [BotFather](https://t.me/BotFather).
-- A Memos access token for each Telegram user who will use the bot.
-- Either Docker or Go 1.25+.
-
-
-## Quick Start
-
-### Get a Memos Access Token
-
-Each Telegram user needs their own Memos access token.
-
-Create a personal access token in your Memos account before using the bot. The
-exact menu location depends on your Memos version, but it is typically under
-your account or settings area.
-
-Keep this token private. Anyone with the token can act as that Memos user.
-
-### Run with Docker
-
-```sh
-docker run -d --name memogram \
-  -e SERVER_ADDR=http://host.docker.internal:5230 \
-  -e BOT_TOKEN=your_telegram_bot_token \
-  # OPTIONAL
-  -e BOT_PROXY_ADDR=your_bot_proxy_addr \
-  # NO NEED TO CHANGE THIS
-  -e DATA=/app/data/data.txt \
-  # NO NEED TO CHANGE THIS
-  -v memogram-data:/app/data \
-  # OPTIONAL
-  -e ALLOWED_USERNAMES=allowed_username_0,allowed_username_1 \
-  conch0601/memogram
-```
-
-Replace:
-
-- `SERVER_ADDR` with the address of your Memos instance.
-- `BOT_TOKEN` with the token from BotFather.
-- `ALLOWED_USERNAMES` with Comma-separated Telegram usernames allowed to use the bot, without `@`. Leave empty to allow any Telegram user. 
-- `conch0601/memogram` with your published image name if you build and publish
-  your own fork.
-
-Check logs:
-
-```sh
-docker logs -f memogram
-```
-
-Docker notes:
-
-- `http://host.docker.internal:5230` usually works on Docker Desktop when
-  Memos runs on the same machine.
-- On Linux, `host.docker.internal` may not exist by default. Use a reachable
-  host/IP instead, or put Memogram and Memos on the same Docker network.
-- The `memogram-data` volume stores linked Telegram access tokens.
-
-### Run with Go
-
-Use the provided `.env.example` as a starting point:
-
-```sh
-cp .env.example .env
-```
-
-Then build and run:
-
-```sh
-go build -o build/memogram ./cmd/memogram
-./build/memogram
-```
+- Go `1.25+` if you want to run from source
+- a Telegram bot token from BotFather
+- a reachable Memos instance
+- a Memos access token for each Telegram user who will use the bot
 
 ## Configuration
 
-Memogram reads configuration from environment variables. If a `.env` file is
-present in the working directory, it is loaded automatically.
+The app reads environment variables directly, and also loads a local `.env` file if present.
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `SERVER_ADDR` | Yes | Address of the Memos server. Examples: `localhost:5230`, `dns:localhost:5230`, `http://localhost:5230`, `https://memos.example.com`. If no scheme is provided, Memogram uses `http://`. |
-| `BOT_TOKEN` | Yes | Telegram bot token from BotFather. |
-| `BOT_PROXY_ADDR` | No | Custom Telegram Bot API server URL. |
-| `DATA` | No | Path to the file used to store linked Telegram user access tokens. Defaults to `data.txt`. The file is created automatically if it does not exist. |
-| `ALLOWED_USERNAMES` | No | Comma-separated Telegram usernames allowed to use the bot, without `@`. Leave empty to allow any Telegram user. |
+You can start from `.env.example`:
 
-Security note:
+```env
+SERVER_ADDR=dns:localhost:5230
+BOT_TOKEN=your_telegram_bot_token
+BOT_PROXY_ADDR=
+DATA=data.txt
+ALLOWED_USERNAMES=
+```
 
-- `DATA` contains Telegram user IDs and Memos access tokens.
-- Do not commit it to git or expose it in backups, logs, or shared volumes.
+### Environment Variables
 
+- `SERVER_ADDR`: Memos server address. If it does not start with `http://` or `https://`, `http://` is added automatically. Values like `dns:localhost:5230` are accepted.
+- `BOT_TOKEN`: Telegram bot token.
+- `BOT_PROXY_ADDR`: optional Telegram Bot API server URL or proxy endpoint.
+- `DATA`: path to the local token storage file. Default: `data.txt`.
+- `ALLOWED_USERNAMES`: optional comma-separated allowlist of Telegram usernames. If empty, any Telegram username can use the bot.
 
-## Using the Bot
+## Quick Start
 
-### 1. Link a Telegram account
+1. Copy the example config:
 
-Send this message to the bot:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and set:
+
+- `SERVER_ADDR`
+- `BOT_TOKEN`
+- optionally `ALLOWED_USERNAMES`
+
+3. Run the bot:
+
+```bash
+go run ./cmd/memogram
+```
+
+4. In Telegram, open your bot and link your account:
 
 ```text
-/start <memos_access_token>
+/start <your_memos_access_token>
 ```
 
-The bot verifies the token and stores it for that Telegram account.
+5. Send a message to the bot. It should reply with a saved memo link and action buttons.
 
-If you revoke or rotate the token in Memos, run `/start <memos_access_token>`
-again with the new token.
+## Docker
 
-### 2. Save content
+Build the image:
 
-After linking your account, send any of the following:
-
-- A text message to create a text memo.
-- A photo, voice message, video, or document to create a memo with an
-  attachment.
-- A captioned upload to use the caption as the memo content.
-- A forwarded message to include source information when Telegram exposes it.
-
-After saving, the bot replies with a memo link and buttons for:
-
-- `Public`
-- `Private`
-- `Pin`
-
-### 3. Use commands
-
-| Command | Description |
-| --- | --- |
-| `/start <memos_access_token>` | Link your Telegram account to Memos. |
-| `/search <words>` | Search your memos and return up to 10 matches. |
-| `/status` | Show backend, storage, access-control, and account-link status. |
-| `/ping` | Reply with `Pong!`. |
-
-## Use an env file
-
-If you prefer an env file instead of passing variables inline:
-
-```sh
-cp .env.example .env
-docker run -d --name memogram \
-  --env-file .env \
-  -e DATA=/app/data/data.txt \
-  -v memogram-data:/app/data \
-  conch0601/memogram
+```bash
+docker build -t memogram .
 ```
 
+Run it:
+
+```bash
+docker run --rm \
+  --name memogram \
+  -e SERVER_ADDR=http://host.docker.internal:5230 \
+  -e BOT_TOKEN=your_telegram_bot_token \
+  -e ALLOWED_USERNAMES=yourtelegramusername \
+  -v "$(pwd)/data.txt:/app/data.txt" \
+  memogram
+```
+
+If you use a `.env` file, you can also mount or pass it in your usual Docker workflow.
+
+## Cross-Platform Build
+
+There is a helper script for release-style builds:
+
+```bash
+./scripts/build.sh
+```
+
+By default it builds:
+
+- `linux/amd64`
+- `freebsd/amd64`
+
+Artifacts are written to `build/`.
+
+## Notes
+
+- The token store is a plain local file managed by the bot. Protect it like a secret.
+- If `ALLOWED_USERNAMES` is set, users without a Telegram username cannot use the bot.
+- Media albums are grouped so multiple items from the same Telegram media group attach to a single memo.
+- The bot replies with a direct memo link based on the Memos instance URL when available.
+
+## Development
+
+Run tests:
+
+```bash
+go test ./...
+```
 
 ## License
 
-Memogram is distributed under the license in [COPYING](COPYING).
+GPL-3.0-or-later. See [COPYING](COPYING).
