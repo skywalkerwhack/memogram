@@ -53,10 +53,14 @@ Keep this token private. Anyone with the token can act as that Memos user.
 docker run -d --name memogram \
   -e SERVER_ADDR=http://host.docker.internal:5230 \
   -e BOT_TOKEN=your_telegram_bot_token \
-  -e BOT_PROXY_ADDR=your_bot_proxy_addr \ # OPTIONAL
-  -e DATA=/app/data/data.txt \ # NO NEED TO CHANGE THIS
-  -v memogram-data:/app/data \ # NO NEED TO CHANGE THIS
-  -e ALLOWED_USERNAMES=allowed_username_0,allowed_username_1 \ # OPTIONAL
+  # OPTIONAL
+  -e BOT_PROXY_ADDR=your_bot_proxy_addr \
+  # NO NEED TO CHANGE THIS
+  -e DATA=/app/data/data.txt \
+  # NO NEED TO CHANGE THIS
+  -v memogram-data:/app/data \
+  # OPTIONAL
+  -e ALLOWED_USERNAMES=allowed_username_0,allowed_username_1 \
   conch0601/memogram
 ```
 
