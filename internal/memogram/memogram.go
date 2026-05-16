@@ -546,6 +546,10 @@ func (s *Service) searchHandler(ctx context.Context, b *bot.Bot, m *models.Updat
 	}))
 	if err != nil {
 		slog.Error("failed to search memos", slog.Any("err", err))
+		b.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: m.Message.Chat.ID,
+			Text:   "Failed to search memos",
+		})
 		return
 	}
 
