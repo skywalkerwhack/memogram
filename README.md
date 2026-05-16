@@ -1,170 +1,163 @@
-<!--
-memogram is a Telegram bot for saving messages into a Memos instance.
-Copyright (C) 2026  skywalkerwhack
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
--->
-
 # Memogram
 
-Memogram is a Telegram bot for saving messages into a
-[Memos](https://www.usememos.com/) instance. Send the bot text, photos, voice
-messages, videos, or documents, and it creates a memo with any supported files
-attached.
+Memogram is a Telegram bot for saving Telegram messages to a
+[Memos](https://www.usememos.com/) instance.
 
-## Project Origin
+Send the bot a message, photo, voice message, video, or document and it will
+create a memo in Memos. After saving, the bot replies with a link to the memo
+and buttons for changing visibility or pinning it.
 
-This repository is essentially a fork of
-[usememos/telegram-integration](https://github.com/usememos/telegram-integration),
-adapted and continued here as Memogram.
+This project continues the work from
+[usememos/telegram-integration](https://github.com/usememos/telegram-integration)
+as a standalone bot.
 
-## What It Does
+## Features
 
-- Saves Telegram messages as Memos notes.
-- Uploads photos, voice messages, videos, and documents as memo attachments.
-- Preserves supported Telegram text formatting in memo content.
-- Adds source information for forwarded messages when Telegram provides it.
-- Lets each Telegram user connect with their own Memos access token.
-- Searches saved memos from Telegram.
-- Restricts bot usage to selected Telegram usernames when configured.
-- Reports bot, storage, backend, and account status with `/status`.
-- Provides inline actions to make a memo public or private, and to toggle pinning.
+- Save plain text messages as memos.
+- Save photos, voice messages, videos, and documents as memo attachments.
+- Use captions as memo content for uploaded files.
+- Preserve supported Telegram formatting.
+- Include forwarded-message source information when Telegram provides it.
+- Link each Telegram account to its own Memos access token.
+- Search saved memos with `/search`.
+- Check bot and account status with `/status`.
+- Update memo visibility and pin state from Telegram inline buttons.
 
 ## Requirements
 
+You need:
+
 - A running Memos instance.
 - A Telegram bot token from [BotFather](https://t.me/BotFather).
-- Go 1.25 or Docker.
+- A Memos access token for each Telegram user who will use the bot.
+- Either Docker or Go 1.25+.
 
-## Configuration
+## Quick Start
 
-Memogram reads configuration from environment variables. When a `.env` file is
-present in the working directory, it is loaded automatically.
-
-Start from the example file:
+### Run with Docker
 
 ```sh
-cp .env.example .env
+docker run -d --name memogram \
+  -e SERVER_ADDR=http://host.docker.internal:5230 \
+  -e BOT_TOKEN=your_telegram_bot_token \
+  -e DATA=/app/data/data.txt \
+  -v memogram-data:/app/data \
+  conch0601/memogram
 ```
 
-Then edit `.env`:
+Replace:
+
+- `SERVER_ADDR` with the address of your Memos instance.
+- `BOT_TOKEN` with the token from BotFather.
+
+Check logs:
+
+```sh
+docker logs -f memogram
+```
+
+Docker notes:
+
+- `http://host.docker.internal:5230` usually works on Docker Desktop when
+  Memos runs on the same machine.
+- On Linux, `host.docker.internal` may not exist by default. Use a reachable
+  host/IP instead, or put Memogram and Memos on the same Docker network.
+- The `memogram-data` volume stores linked Telegram access tokens.
+
+### Run with Go
+
+Create a `.env` file in the project directory:
 
 ```env
-SERVER_ADDR=dns:localhost:5230
+SERVER_ADDR=http://localhost:5230
 BOT_TOKEN=your_telegram_bot_token
 BOT_PROXY_ADDR=
 DATA=data.txt
 ALLOWED_USERNAMES=
 ```
 
+Then build and run:
+
+```sh
+go build -o build/memogram ./cmd/memogram
+./build/memogram
+```
+
+## Configuration
+
+Memogram reads configuration from environment variables. If a `.env` file is
+present in the working directory, it is loaded automatically.
+
 | Variable | Required | Description |
 | --- | --- | --- |
-| `SERVER_ADDR` | Yes | Memos server address. `localhost:5230`, `dns:localhost:5230`, `http://localhost:5230`, and `https://memos.example.com` are supported. Addresses without `http://` or `https://` use `http://`. |
-| `BOT_TOKEN` | Yes | Telegram bot token. |
+| `SERVER_ADDR` | Yes | Address of the Memos server. Examples: `localhost:5230`, `dns:localhost:5230`, `http://localhost:5230`, `https://memos.example.com`. If no scheme is provided, Memogram uses `http://`. |
+| `BOT_TOKEN` | Yes | Telegram bot token from BotFather. |
 | `BOT_PROXY_ADDR` | No | Custom Telegram Bot API server URL. |
-| `DATA` | No | File used to store Telegram user access tokens. Defaults to `data.txt`. The file is created automatically if it does not exist. |
+| `DATA` | No | Path to the file used to store linked Telegram user access tokens. Defaults to `data.txt`. The file is created automatically if it does not exist. |
 | `ALLOWED_USERNAMES` | No | Comma-separated Telegram usernames allowed to use the bot, without `@`. Leave empty to allow any Telegram user. |
 
-### Access Control
-
-Use `ALLOWED_USERNAMES` to limit who can use the bot:
+### Restrict access to specific Telegram users
 
 ```env
 ALLOWED_USERNAMES=alex,john,emily
 ```
 
-Matching is case-insensitive and surrounding whitespace is ignored. Do not
-include the `@` prefix. When this setting is used, Telegram accounts without a
-username cannot use the bot.
+Rules:
 
-## Run
+- Matching is case-insensitive.
+- Surrounding whitespace is ignored.
+- Do not include `@`.
+- If this setting is used, Telegram accounts without a username cannot use the
+  bot.
 
-### Binary
+## Using the Bot
 
-Build Memogram:
+### 1. Link a Telegram account
 
-```sh
-go build -o build/memogram ./cmd/memogram
-```
-
-Run it from the directory containing `.env`:
-
-```sh
-./build/memogram
-```
-
-You can also download a prebuilt archive from the
-[Releases](https://github.com/usememos/memogram/releases) page.
-
-### Docker
-
-Build the image:
-
-```sh
-docker build -t memogram .
-```
-
-Run the container:
-
-```sh
-docker run -d --name memogram \
-  -e SERVER_ADDR=dns:localhost:5230 \
-  -e BOT_TOKEN=your_telegram_bot_token \
-  -e DATA=/app/data.txt \
-  memogram
-```
-
-Add `BOT_PROXY_ADDR` or `ALLOWED_USERNAMES` if your deployment needs them. Mount
-a volume for `/app/data.txt` if you want linked Telegram accounts to survive
-container replacement.
-
-### Automated Docker Hub publishing
-
-The GitHub release workflow also publishes a Docker image to Docker Hub when a
-tag such as `v1.2.3` or `v1.2.3-rc1` is released.
-
-Set these GitHub repository secrets before using it:
-
-- `DOCKERHUB_USERNAME`: your Docker Hub username.
-- `DOCKERHUB_TOKEN`: a Docker Hub access token with permission to push images.
-
-The workflow pushes `${DOCKERHUB_USERNAME}/memogram:<tag>` for every release
-tag. For stable tags without a prerelease suffix, it also updates
-`${DOCKERHUB_USERNAME}/memogram:latest`.
-
-## Bot Usage
-
-Connect your Telegram account to Memos:
+Send this message to the bot:
 
 ```text
 /start <memos_access_token>
 ```
 
-After the account is connected:
+The bot verifies the token and stores it for that Telegram account.
 
-| Telegram action | Result |
+### 2. Save content
+
+After linking your account, send any of the following:
+
+- A text message to create a text memo.
+- A photo, voice message, video, or document to create a memo with an
+  attachment.
+- A captioned upload to use the caption as the memo content.
+- A forwarded message to include source information when Telegram exposes it.
+
+After saving, the bot replies with a memo link and buttons for:
+
+- `Public`
+- `Private`
+- `Pin`
+
+### 3. Use commands
+
+| Command | Description |
 | --- | --- |
-| Send text | Creates a memo with that text. |
-| Send a photo, voice message, video, or document | Creates a memo and uploads the file as an attachment. |
-| Send a captioned file | Uses the caption as memo content and attaches the file. |
-| Forward a message | Adds forwarded-source information when available. |
-| `/search <words>` | Searches your memos and returns up to 10 matches. |
-| `/status` | Shows bot, backend, storage, access-control, and account-link status. |
-| `/ping` | Replies with `Pong!`. |
+| `/start <memos_access_token>` | Link your Telegram account to Memos. |
+| `/search <words>` | Search your memos and return up to 10 matches. |
+| `/status` | Show backend, storage, access-control, and account-link status. |
+| `/ping` | Reply with `Pong!`. |
 
-When a memo is created, Memogram replies with a link to the memo and inline
-buttons for changing visibility or pinning.
+## Docker with an env file
+
+If you already have a `.env` file:
+
+```sh
+docker run -d --name memogram \
+  --env-file .env \
+  -e DATA=/app/data/data.txt \
+  -v memogram-data:/app/data \
+  conch0601/memogram
+```
 
 ## Development
 
@@ -180,19 +173,37 @@ Build a local binary:
 go build -o build/memogram ./cmd/memogram
 ```
 
-Build the default cross-platform binaries:
+Build release binaries:
 
 ```sh
 ./scripts/build.sh
 ```
 
-By default, the helper writes `build/memogram-linux-amd64` and
-`build/memogram-freebsd-amd64`. Set `TARGETS` to choose other Go
-`GOOS/GOARCH` pairs:
+By default, `scripts/build.sh` writes:
+
+- `build/memogram-linux-amd64`
+- `build/memogram-freebsd-amd64`
+
+To build different targets:
 
 ```sh
 TARGETS="linux/amd64 linux/arm64 freebsd/amd64" ./scripts/build.sh
 ```
+
+## Releases
+
+Prebuilt archives are available from
+[GitHub Releases](https://github.com/usememos/memogram/releases).
+
+The release workflow can also publish Docker images for tags such as
+`v1.2.3` or `v1.2.3-rc1`.
+
+Required repository secrets:
+
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
+
+Stable release tags also update `latest`.
 
 ## License
 
