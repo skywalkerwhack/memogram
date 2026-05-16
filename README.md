@@ -1,6 +1,4 @@
 - [Memogram](#memogram)
-   * [What It Looks Like](#what-it-looks-like)
-   * [Features](#features)
    * [Requirements](#requirements)
    * [Quick Start](#quick-start)
       + [Get a Memos Access Token](#get-a-memos-access-token)
@@ -29,26 +27,6 @@ This project continues the work from
 [usememos/telegram-integration](https://github.com/usememos/telegram-integration)
 as a standalone bot.
 
-## What It Looks Like
-
-Typical flow:
-
-1. Send `/start <memos_access_token>` once to link your Telegram account.
-2. Send text, a photo, a voice message, a video, or a document.
-3. Receive a reply with the saved memo link plus `Public`, `Private`, and `Pin`
-   buttons.
-
-## Features
-
-- Save plain text messages as memos.
-- Save photos, voice messages, videos, and documents as memo attachments.
-- Use captions as memo content for uploaded files.
-- Preserve supported Telegram formatting.
-- Include forwarded-message source information when Telegram provides it.
-- Link each Telegram account to its own Memos access token.
-- Search saved memos with `/search`.
-- Check bot and account status with `/status`.
-- Update memo visibility and pin state from Telegram inline buttons.
 
 ## Requirements
 
