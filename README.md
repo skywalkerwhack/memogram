@@ -131,6 +131,15 @@ container replacement.
 
 ### Docker Compose
 
+Sample file:
+
+```sh
+cp compose.yaml.example compose.yaml
+```
+
+If Memogram needs to reach a Memos container on the same compose network, set
+`SERVER_ADDR` in `.env` to `http://memos:5230`.
+
 ```yaml
 services:
   memogram:
@@ -138,6 +147,13 @@ services:
     container_name: memogram
     env_file: .env
     restart: unless-stopped
+    environment:
+      DATA: /app/data/data.txt
+    volumes:
+      - memogram-data:/app/data
+
+volumes:
+  memogram-data:
 ```
 
 Start it:

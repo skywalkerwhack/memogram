@@ -1,0 +1,15 @@
+services:
+  memogram:
+    build:
+      context: .
+    container_name: memogram
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATA: /app/data/data.txt
+    volumes:
+      - memogram-data:/app/data
+
+volumes:
+  memogram-data:
