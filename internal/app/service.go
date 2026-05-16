@@ -14,7 +14,8 @@ type Service struct {
 	backend Backend
 	store   TokenStore
 
-	baseURL          string
+	serverURL        string
+	dataFile         string
 	allowedUsernames map[string]struct{}
 
 	mediaGroupCache sync.Map
@@ -23,7 +24,7 @@ type Service struct {
 	instanceProfile *domain.InstanceProfile
 }
 
-func NewService(backend Backend, store TokenStore, allowedUsernames []string) *Service {
+func NewService(backend Backend, store TokenStore, dataFile string, allowedUsernames []string) *Service {
 	allowedSet := make(map[string]struct{}, len(allowedUsernames))
 	for _, username := range allowedUsernames {
 		allowedSet[strings.ToLower(strings.TrimSpace(username))] = struct{}{}
@@ -32,7 +33,8 @@ func NewService(backend Backend, store TokenStore, allowedUsernames []string) *S
 	return &Service{
 		backend:          backend,
 		store:            store,
-		baseURL:          backend.BaseURL(),
+		serverURL:        backend.BaseURL(),
+		dataFile:         dataFile,
 		allowedUsernames: allowedSet,
 	}
 }
@@ -78,8 +80,8 @@ func (s *Service) UnlinkAccount(telegramUserID int64) (bool, error) {
 	return s.store.DeleteUserAccessToken(telegramUserID)
 }
 
-func (s *Service) CreateMemoFromMessage(ctx context.Context, input domain.SaveMessageInput) (*domain.Memo, error) {
-	accessToken, err := s.requireAccessToken(input.TelegramUserID)
+func (s *Service) CreateMemo(ctx context.Context, input CreateMemoInput) (*domain.Memo, error) {
+	accessToken, err := s.requireAccessToken(input.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,14 +95,14 @@ func (s *Service) CreateMemoFromMessage(ctx context.Context, input domain.SaveMe
 		}
 	}
 
-	if input.MediaGroupID == "" {
+	if input.AttachmentSet == "" {
 		return s.backend.CreateMemo(ctx, accessToken, content)
 	}
 
 	s.mediaGroupMutex.Lock()
 	defer s.mediaGroupMutex.Unlock()
 
-	if cached, ok := s.mediaGroupCache.Load(input.MediaGroupID); ok {
+	if cached, ok := s.mediaGroupCache.Load(input.AttachmentSet); ok {
 		return cached.(*domain.Memo), nil
 	}
 
@@ -108,7 +110,7 @@ func (s *Service) CreateMemoFromMessage(ctx context.Context, input domain.SaveMe
 	if err != nil {
 		return nil, err
 	}
-	s.mediaGroupCache.Store(input.MediaGroupID, memo)
+	s.mediaGroupCache.Store(input.AttachmentSet, memo)
 	return memo, nil
 }
 
@@ -143,22 +145,17 @@ func (s *Service) SearchMemos(ctx context.Context, telegramUserID int64, query s
 	return s.backend.SearchMemos(ctx, accessToken, query, creatorID, limit)
 }
 
-type StatusReport struct {
-	Server              string
-	DataFile            string
-	BackendLatencyLine  string
-	InstanceURL         string
-	AllowedUsernames    int
-	LinkedTelegramUsers int
-	AccountLinkState    string
-}
-
-func (s *Service) GetStatus(ctx context.Context, telegramUserID int64, dataFile string) StatusReport {
+func (s *Service) GetStatus(ctx context.Context, telegramUserID int64) StatusReport {
+	backendStatus := ProbeBackendLatency(ctx, s.backend)
 	report := StatusReport{
-		Server:              s.baseURL,
-		DataFile:            dataFile,
-		BackendLatencyLine:  ProbeBackendLatency(ctx, s.backend).StatusLine(),
-		LinkedTelegramUsers: s.store.CountUserAccessTokens(),
+		ServerURL:        s.serverURL,
+		DataFile:         s.dataFile,
+		BackendLatency:   backendStatus.Latency,
+		BackendAvailable: backendStatus.Err == nil,
+		LinkedUsers:      s.store.CountUserAccessTokens(),
+	}
+	if backendStatus.Err != nil {
+		report.BackendError = sanitizeBackendError(backendStatus.Err)
 	}
 
 	if s.instanceProfile != nil {
@@ -171,38 +168,26 @@ func (s *Service) GetStatus(ctx context.Context, telegramUserID int64, dataFile 
 
 	accessToken, ok := s.store.GetUserAccessToken(telegramUserID)
 	if !ok {
-		report.AccountLinkState = "not connected"
 		return report
 	}
+	report.AccountLinked = true
 
 	user, err := s.backend.GetCurrentUser(ctx, accessToken)
 	if err != nil {
-		report.AccountLinkState = "saved token is invalid"
 		return report
 	}
-
-	displayName := user.DisplayName
-	if displayName == "" {
-		displayName = user.Username
-	}
-	if displayName == "" {
-		displayName = user.Name
-	}
-	if displayName == "" {
-		displayName = "connected"
-	}
-
-	report.AccountLinkState = "connected as " + displayName
+	report.AccountTokenValid = true
+	report.AccountDisplayName = displayNameOf(user)
 	return report
 }
 
-func (s *Service) UpdateMemoAction(ctx context.Context, telegramUserID int64, action string, memoName string) (*domain.Memo, bool, error) {
+func (s *Service) UpdateMemoAction(ctx context.Context, telegramUserID int64, action MemoAction, memoName string) (*domain.Memo, bool, error) {
 	accessToken, err := s.requireAccessToken(telegramUserID)
 	if err != nil {
 		return nil, false, err
 	}
 
-	if action == "delete" {
+	if action == ActionDelete {
 		if err := s.backend.DeleteMemo(ctx, accessToken, memoName); err != nil {
 			return nil, false, err
 		}
@@ -215,13 +200,13 @@ func (s *Service) UpdateMemoAction(ctx context.Context, telegramUserID int64, ac
 	}
 
 	switch action {
-	case "public":
+	case ActionPublic:
 		memo.Visibility = domain.VisibilityPublic
-	case "protected":
+	case ActionProtected:
 		memo.Visibility = domain.VisibilityProtected
-	case "private":
+	case ActionPrivate:
 		memo.Visibility = domain.VisibilityPrivate
-	case "pin":
+	case ActionPin:
 		memo.Pinned = !memo.Pinned
 	default:
 		return nil, false, fmt.Errorf("unknown action")
@@ -238,7 +223,7 @@ func (s *Service) MemoBaseURL() string {
 	if s.instanceProfile != nil && s.instanceProfile.InstanceURL != "" {
 		return s.instanceProfile.InstanceURL
 	}
-	return s.baseURL
+	return s.serverURL
 }
 
 func (s *Service) requireAccessToken(telegramUserID int64) (string, error) {
@@ -247,4 +232,19 @@ func (s *Service) requireAccessToken(telegramUserID int64) (string, error) {
 		return "", domain.ErrAccountNotLinked
 	}
 	return accessToken, nil
+}
+
+func displayNameOf(user *domain.User) string {
+	if user == nil {
+		return ""
+	}
+
+	displayName := user.DisplayName
+	if displayName == "" {
+		displayName = user.Username
+	}
+	if displayName == "" {
+		displayName = user.Name
+	}
+	return displayName
 }

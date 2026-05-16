@@ -9,18 +9,17 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/usememos/memogram/internal/app"
 	"github.com/usememos/memogram/internal/config"
 )
 
 type Bot struct {
 	bot        *bot.Bot
-	service    *app.Service
+	service    Service
 	config     *config.Config
 	httpClient *http.Client
 }
 
-func NewBot(cfg *config.Config, service *app.Service) (*Bot, error) {
+func NewBot(cfg *config.Config, service Service) (*Bot, error) {
 	tg := &Bot{
 		service:    service,
 		config:     cfg,

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/usememos/memogram/internal/app"
 	"github.com/usememos/memogram/internal/domain"
 )
 
@@ -23,7 +24,7 @@ func (t *Bot) handleCallbackQuery(ctx context.Context, b *bot.Bot, update *model
 		return
 	}
 
-	action, memoName := parts[0], parts[1]
+	action, memoName := app.MemoAction(parts[0]), parts[1]
 	memo, deleted, err := t.service.UpdateMemoAction(ctx, update.CallbackQuery.From.ID, action, memoName)
 	if err != nil {
 		switch {
@@ -84,8 +85,8 @@ func (t *Bot) handleCallbackQuery(ctx context.Context, b *bot.Bot, update *model
 	})
 }
 
-func failureText(action string) string {
-	if action == "delete" {
+func failureText(action app.MemoAction) string {
+	if action == app.ActionDelete {
 		return "Failed to delete memo"
 	}
 	return "Failed to update memo"

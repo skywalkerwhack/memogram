@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/usememos/memogram/internal/app"
 	"github.com/usememos/memogram/internal/domain"
 )
 
@@ -159,13 +161,13 @@ func (t *Bot) searchHandler(ctx context.Context, update *models.Update) {
 }
 
 func (t *Bot) statusHandler(ctx context.Context, update *models.Update) {
-	report := t.service.GetStatus(ctx, update.Message.From.ID, t.config.Data)
+	report := t.service.GetStatus(ctx, update.Message.From.ID)
 
 	lines := []string{
 		"Memogram status",
-		fmt.Sprintf("Server: %s", report.Server),
+		fmt.Sprintf("Server: %s", report.ServerURL),
 		fmt.Sprintf("Data file: %s", report.DataFile),
-		report.BackendLatencyLine,
+		backendStatusLine(report),
 	}
 
 	if report.InstanceURL != "" {
@@ -178,23 +180,45 @@ func (t *Bot) statusHandler(ctx context.Context, update *models.Update) {
 		lines = append(lines, fmt.Sprintf("Allowed usernames: %d configured", report.AllowedUsernames))
 	}
 
-	lines = append(lines, fmt.Sprintf("Linked Telegram users: %d", report.LinkedTelegramUsers))
+	lines = append(lines, fmt.Sprintf("Linked Telegram users: %d", report.LinkedUsers))
 
-	switch report.AccountLinkState {
-	case "not connected":
+	switch {
+	case !report.AccountLinked:
 		lines = append(lines, "Account link: not connected")
 		lines = append(lines, "Use /start <access_token> to connect this Telegram account.")
-	case "saved token is invalid":
+	case !report.AccountTokenValid:
 		lines = append(lines, "Account link: saved token is invalid")
 		lines = append(lines, "Run /start <access_token> again to refresh it.")
 	default:
-		lines = append(lines, "Account link: "+report.AccountLinkState)
+		displayName := report.AccountDisplayName
+		if displayName == "" {
+			displayName = "connected"
+		}
+		lines = append(lines, "Account link: connected as "+displayName)
 	}
 
 	t.bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
 		Text:   strings.Join(lines, "\n"),
 	})
+}
+
+func backendStatusLine(report app.StatusReport) string {
+	if !report.BackendAvailable {
+		return fmt.Sprintf("Backend latency: unavailable (%s)", report.BackendError)
+	}
+	return fmt.Sprintf("Backend latency: %s", formatLatency(report.BackendLatency))
+}
+
+func formatLatency(latency time.Duration) string {
+	switch {
+	case latency < time.Millisecond:
+		return fmt.Sprintf("%dµs", latency.Microseconds())
+	case latency < time.Second:
+		return latency.Round(time.Millisecond).String()
+	default:
+		return latency.Round(10 * time.Millisecond).String()
+	}
 }
 
 func (t *Bot) pingHandler(ctx context.Context, update *models.Update) {

@@ -41,7 +41,7 @@ func main() {
 	}
 
 	backend := memos.NewBackend(cfg.ServerAddr, http.DefaultClient)
-	service := app.NewService(backend, tokenStore, cfg.AllowedUsernames)
+	service := app.NewService(backend, tokenStore, cfg.Data, cfg.AllowedUsernames)
 
 	tgBot, err := telegram.NewBot(cfg, service)
 	if err != nil {

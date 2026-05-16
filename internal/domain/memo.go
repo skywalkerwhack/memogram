@@ -41,13 +41,6 @@ type ForwardInfo struct {
 	Username string
 }
 
-type SaveMessageInput struct {
-	TelegramUserID int64
-	Content        string
-	MediaGroupID   string
-	ForwardedFrom  *ForwardInfo
-}
-
 func GetNameParentTokens(name string, tokenPrefixes ...string) ([]string, error) {
 	parts := strings.Split(name, "/")
 	if len(parts) != 2*len(tokenPrefixes) {

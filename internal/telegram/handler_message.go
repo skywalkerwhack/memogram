@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/usememos/memogram/internal/app"
 	"github.com/usememos/memogram/internal/domain"
 )
 
@@ -35,18 +36,18 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 		return
 	}
 
-	input := domain.SaveMessageInput{
-		TelegramUserID: message.From.ID,
-		Content:        content,
+	input := app.CreateMemoInput{
+		UserID:  message.From.ID,
+		Content: content,
 	}
 	if message.MediaGroupID != "" {
-		input.MediaGroupID = message.MediaGroupID
+		input.AttachmentSet = message.MediaGroupID
 	}
 	if message.ForwardOrigin != nil {
 		input.ForwardedFrom = forwardedFrom(message.ForwardOrigin)
 	}
 
-	memo, err := t.service.CreateMemoFromMessage(ctx, input)
+	memo, err := t.service.CreateMemo(ctx, input)
 	if err != nil {
 		if errors.Is(err, domain.ErrAccountNotLinked) {
 			t.bot.SendMessage(ctx, &bot.SendMessageParams{
