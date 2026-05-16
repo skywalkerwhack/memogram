@@ -129,39 +129,6 @@ Add `BOT_PROXY_ADDR` or `ALLOWED_USERNAMES` if your deployment needs them. Mount
 a volume for `/app/data.txt` if you want linked Telegram accounts to survive
 container replacement.
 
-### Docker Compose
-
-Sample file:
-
-```sh
-cp compose.yaml.example compose.yaml
-```
-
-If Memogram needs to reach a Memos container on the same compose network, set
-`SERVER_ADDR` in `.env` to `http://memos:5230`.
-
-```yaml
-services:
-  memogram:
-    build: .
-    container_name: memogram
-    env_file: .env
-    restart: unless-stopped
-    environment:
-      DATA: /app/data/data.txt
-    volumes:
-      - memogram-data:/app/data
-
-volumes:
-  memogram-data:
-```
-
-Start it:
-
-```sh
-docker compose up -d
-```
-
 ### Automated Docker Hub publishing
 
 The GitHub release workflow also publishes a Docker image to Docker Hub when a
