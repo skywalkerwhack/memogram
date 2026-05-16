@@ -11,8 +11,6 @@
       + [2. Save content](#2-save-content)
       + [3. Use commands](#3-use-commands)
    * [Use an env file](#use-an-env-file)
-   * [Development](#development)
-   * [Releases](#releases)
    * [License](#license)
 # Memogram
 
@@ -182,51 +180,6 @@ docker run -d --name memogram \
   conch0601/memogram
 ```
 
-## Development
-
-Run tests:
-
-```sh
-go test ./...
-```
-
-Build a local binary:
-
-```sh
-go build -o build/memogram ./cmd/memogram
-```
-
-Build release binaries:
-
-```sh
-./scripts/build.sh
-```
-
-By default, `scripts/build.sh` writes:
-
-- `build/memogram-linux-amd64`
-- `build/memogram-freebsd-amd64`
-
-To build different targets:
-
-```sh
-TARGETS="linux/amd64 linux/arm64 freebsd/amd64" ./scripts/build.sh
-```
-
-## Releases
-
-Prebuilt archives are available from
-[GitHub Releases](https://github.com/skywalkerwhack/memogram/releases).
-
-The release workflow can also publish Docker images for tags such as
-`v1.2.3` or `v1.2.3-rc1`.
-
-Required repository secrets:
-
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
-
-Stable release tags also update `latest`.
 
 ## License
 
