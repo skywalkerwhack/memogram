@@ -41,7 +41,10 @@ You need:
 - A Memos access token for each Telegram user who will use the bot.
 - Either Docker or Go 1.25+.
 
-## Get a Memos Access Token
+
+## Quick Start
+
+### Get a Memos Access Token
 
 Each Telegram user needs their own Memos access token.
 
@@ -50,8 +53,6 @@ exact menu location depends on your Memos version, but it is typically under
 your account or settings area.
 
 Keep this token private. Anyone with the token can act as that Memos user.
-
-## Quick Start
 
 ### Run with Docker
 
