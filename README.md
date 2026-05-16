@@ -60,8 +60,8 @@ Keep this token private. Anyone with the token can act as that Memos user.
 docker run -d --name memogram \
   -e SERVER_ADDR=http://host.docker.internal:5230 \
   -e BOT_TOKEN=your_telegram_bot_token \
-  -e DATA=/app/data/data.txt \
-  -v memogram-data:/app/data \
+  -e DATA=/app/data/data.txt \ # NO NEED TO CHANGE THIS
+  -v memogram-data:/app/data \ # NO NEED TO CHANGE THIS
   conch0601/memogram
 ```
 
