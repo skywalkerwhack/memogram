@@ -56,7 +56,7 @@ docker run -d --name memogram \
   -e BOT_PROXY_ADDR=your_bot_proxy_addr \ # OPTIONAL
   -e DATA=/app/data/data.txt \ # NO NEED TO CHANGE THIS
   -v memogram-data:/app/data \ # NO NEED TO CHANGE THIS
-  -e ALLOWED_USERNAMES= \ # OPTIONAL
+  -e ALLOWED_USERNAMES=allowed_username_0,allowed_username_1 \ # OPTIONAL
   conch0601/memogram
 ```
 
