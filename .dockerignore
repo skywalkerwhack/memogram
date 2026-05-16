@@ -1,0 +1,9 @@
+.git
+.github
+.codex
+build
+dist
+scripts
+README.md
+COPYING
+.goreleaser.yaml
