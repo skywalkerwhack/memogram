@@ -1,6 +1,6 @@
 services:
   memogram:
-    image: your-dockerhub-username/memogram:latest
+    image: conch0601/memogram:latest
     container_name: memogram
     env_file: .env
     restart: unless-stopped
