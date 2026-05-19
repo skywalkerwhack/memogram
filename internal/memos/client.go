@@ -142,11 +142,10 @@ type client struct {
 func (b *Backend) newClient(accessToken string) *client {
 	httpClient := b.httpClient
 	if accessToken != "" {
-		httpClient = &http.Client{
-			Transport: &authTransport{
-				token:     accessToken,
-				transport: http.DefaultTransport,
-			},
+		httpClient = cloneHTTPClient(httpClient)
+		httpClient.Transport = &authTransport{
+			token:     accessToken,
+			transport: transportOf(httpClient.Transport),
 		}
 	}
 
@@ -156,6 +155,22 @@ func (b *Backend) newClient(accessToken string) *client {
 		MemoService:       apiv1connect.NewMemoServiceClient(httpClient, b.baseURL),
 		AttachmentService: apiv1connect.NewAttachmentServiceClient(httpClient, b.baseURL),
 	}
+}
+
+func cloneHTTPClient(httpClient *http.Client) *http.Client {
+	if httpClient == nil {
+		return http.DefaultClient
+	}
+
+	cloned := *httpClient
+	return &cloned
+}
+
+func transportOf(transport http.RoundTripper) http.RoundTripper {
+	if transport != nil {
+		return transport
+	}
+	return http.DefaultTransport
 }
 
 type authTransport struct {

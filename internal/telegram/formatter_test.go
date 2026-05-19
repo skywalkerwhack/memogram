@@ -28,7 +28,7 @@ func TestFormatContent_MixedEntities(t *testing.T) {
 	}
 
 	got := formatContent(content, entities)
-	want := "See [example.com](example.com) and **bold** text [link](https://example.com)"
+	want := "See [example\\.com](example.com) and *bold* text [link](https://example.com)"
 	if got != want {
 		t.Fatalf("unexpected content:\nwant: %q\ngot:  %q", want, got)
 	}
@@ -50,7 +50,7 @@ func TestFormatContent_OutOfOrderEntities(t *testing.T) {
 	}
 
 	got := formatContent(content, entities)
-	want := "*Italic* and **bold**"
+	want := "_Italic_ and *bold*"
 	if got != want {
 		t.Fatalf("unexpected content:\nwant: %q\ngot:  %q", want, got)
 	}
@@ -72,7 +72,17 @@ func TestFormatContent_OverlappingEntities(t *testing.T) {
 	}
 
 	got := formatContent(content, entities)
-	want := "**Overlap** test"
+	want := "*Overlap* test"
+	if got != want {
+		t.Fatalf("unexpected content:\nwant: %q\ngot:  %q", want, got)
+	}
+}
+
+func TestFormatContent_EscapesPlainTextForMarkdownV2(t *testing.T) {
+	content := "Use [brackets] and dots."
+
+	got := formatContent(content, nil)
+	want := "Use \\[brackets\\] and dots\\."
 	if got != want {
 		t.Fatalf("unexpected content:\nwant: %q\ngot:  %q", want, got)
 	}

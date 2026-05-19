@@ -14,6 +14,8 @@ import (
 type FileTokenStore struct {
 	dataPath string
 
+	mu sync.Mutex
+
 	userAccessTokenCache sync.Map // map[int64]string
 }
 
@@ -34,16 +36,33 @@ func (s *FileTokenStore) GetUserAccessToken(userID int64) (string, bool) {
 }
 
 func (s *FileTokenStore) SetUserAccessToken(userID int64, accessToken string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	previous, hadPrevious := s.GetUserAccessToken(userID)
 	s.userAccessTokenCache.Store(userID, accessToken)
-	return s.saveUserAccessTokenMapToFile()
+	if err := s.saveUserAccessTokenMapToFile(); err != nil {
+		if hadPrevious {
+			s.userAccessTokenCache.Store(userID, previous)
+		} else {
+			s.userAccessTokenCache.Delete(userID)
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *FileTokenStore) DeleteUserAccessToken(userID int64) (bool, error) {
-	_, existed := s.userAccessTokenCache.LoadAndDelete(userID)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	previous, existed := s.GetUserAccessToken(userID)
 	if !existed {
 		return false, nil
 	}
+	s.userAccessTokenCache.Delete(userID)
 	if err := s.saveUserAccessTokenMapToFile(); err != nil {
+		s.userAccessTokenCache.Store(userID, previous)
 		return true, err
 	}
 	return true, nil

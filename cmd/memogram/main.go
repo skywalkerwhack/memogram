@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/skywalkerwhack/memogram/internal/app"
 	"github.com/skywalkerwhack/memogram/internal/config"
@@ -40,10 +41,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	backend := memos.NewBackend(cfg.ServerAddr, http.DefaultClient)
+	httpClient := &http.Client{
+		Timeout: 35 * time.Second,
+	}
+
+	backend := memos.NewBackend(cfg.ServerAddr, httpClient)
 	service := app.NewService(backend, tokenStore, cfg.Data, cfg.AllowedUsernames)
 
-	tgBot, err := telegram.NewBot(cfg, service)
+	tgBot, err := telegram.NewBot(cfg, service, httpClient)
 	if err != nil {
 		log.Fatal(err)
 	}
