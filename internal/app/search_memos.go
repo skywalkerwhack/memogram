@@ -2,8 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
-	"strconv"
 
 	"github.com/skywalkerwhack/memogram/internal/domain"
 )
@@ -14,18 +12,9 @@ func (s *Service) SearchMemos(ctx context.Context, telegramUserID int64, query s
 		return nil, err
 	}
 
-	user, err := s.backend.GetCurrentUser(ctx, accessToken)
+	creatorID, err := s.lookupCreatorID(ctx, accessToken)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", domain.ErrInvalidToken, err)
-	}
-
-	var creatorID *int64
-	if user != nil {
-		if tokens, err := domain.GetNameParentTokens(user.Name, "users/"); err == nil && len(tokens) == 1 {
-			if parsedUserID, err := strconv.ParseInt(tokens[0], 10, 64); err == nil {
-				creatorID = &parsedUserID
-			}
-		}
+		return nil, err
 	}
 
 	return s.backend.SearchMemos(ctx, accessToken, query, creatorID, limit)
