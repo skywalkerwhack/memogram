@@ -14,14 +14,17 @@ import (
 )
 
 const (
-	commandStart  = "/start"
-	commandHelp   = "/help"
-	commandUnlink = "/unlink"
-	commandSearch = "/search"
+	commandStart   = "/start"
+	commandHelp    = "/help"
+	commandUnlink  = "/unlink"
+	commandSearch  = "/search"
 	commandAccount = "/account"
 	commandMe      = "/me"
-	commandPing   = "/ping"
+	commandPing    = "/ping"
+	commandCancel  = "/cancel"
 )
+
+const searchPageSize = 5
 
 func (t *Bot) handleCommand(ctx context.Context, update *models.Update) bool {
 	message := update.Message
@@ -41,6 +44,8 @@ func (t *Bot) handleCommand(ctx context.Context, update *models.Update) bool {
 		t.accountHandler(ctx, update)
 	case strings.HasPrefix(message.Text, commandPing+" ") || message.Text == commandPing:
 		t.pingHandler(ctx, update)
+	case strings.HasPrefix(message.Text, commandCancel+" ") || message.Text == commandCancel:
+		t.cancelHandler(ctx, update)
 	default:
 		return false
 	}
@@ -84,10 +89,12 @@ func (t *Bot) helpHandler(ctx context.Context, update *models.Update) {
 		"/search <words> - search your saved memos",
 		"/account - show your current Memos account link",
 		"/me - alias of /account",
+		"/cancel - leave memo edit mode",
 		"/ping - show admin-only backend diagnostics",
 		"/help - show this help message",
 		"",
 		"Send text, photos, voice messages, videos, or documents to save them as memos.",
+		"Use the Edit button on any memo card, then send the replacement text.",
 	}
 
 	t.bot.SendMessage(ctx, &bot.SendMessageParams{
@@ -126,7 +133,7 @@ func (t *Bot) searchHandler(ctx context.Context, update *models.Update) {
 		return
 	}
 
-	memos, err := t.service.SearchMemos(ctx, update.Message.From.ID, searchString, 10)
+	page, err := t.service.SearchMemosPage(ctx, update.Message.From.ID, searchString, 0, searchPageSize)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrAccountNotLinked):
@@ -148,7 +155,7 @@ func (t *Bot) searchHandler(ctx context.Context, update *models.Update) {
 		return
 	}
 
-	if len(memos) == 0 {
+	if len(page.Memos) == 0 {
 		t.bot.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
 			Text:   "No memos found for the specified search criteria.",
@@ -156,11 +163,13 @@ func (t *Bot) searchHandler(ctx context.Context, update *models.Update) {
 		return
 	}
 
-	for _, memo := range memos {
-		t.bot.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: update.Message.Chat.ID,
-			Text:   memo.Name + "\n" + memo.Content,
-		})
+	for _, memo := range page.Memos {
+		t.sendMemoCard(ctx, update.Message.Chat.ID, memo, 0)
+	}
+
+	if page.HasMore {
+		sessionID := t.service.CreateSearchSession(update.Message.From.ID, searchString, page.Offset+len(page.Memos), page.Limit)
+		t.sendSearchMorePrompt(ctx, update.Message.Chat.ID, searchString, sessionID)
 	}
 }
 
@@ -231,6 +240,21 @@ func (t *Bot) pingHandler(ctx context.Context, update *models.Update) {
 	t.bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
 		Text:   strings.Join(lines, "\n"),
+	})
+}
+
+func (t *Bot) cancelHandler(ctx context.Context, update *models.Update) {
+	if !t.service.CancelMemoEdit(update.Message.From.ID) {
+		t.bot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   "No memo edit is currently in progress.",
+		})
+		return
+	}
+
+	t.bot.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: update.Message.Chat.ID,
+		Text:   "Memo edit canceled.",
 	})
 }
 

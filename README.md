@@ -7,7 +7,8 @@ It is designed for a simple workflow:
 - send text to the bot and it becomes a memo
 - send photos, documents, voice messages, or videos and they are attached to that memo
 - forward messages from Telegram and the original sender is noted in the memo
-- search your saved memos from Telegram
+- search your saved memos from Telegram with paged results
+- edit memo content from Telegram
 - change memo visibility, pin, or delete a memo from inline buttons
 
 ## What It Does
@@ -23,14 +24,17 @@ Supported Telegram actions:
 - voice messages
 - videos
 - forwarded messages
+- inline memo actions for public, protected, private, pin, edit, and delete
+- paged search result browsing with a "More Results" button
 
 Supported bot commands:
 
 - `/start <access_token>`: link your Telegram account to Memos
 - `/help`: show help
-- `/search <words>`: search your memos
+- `/search <words>`: search your memos and browse results in pages
 - `/account`: show whether your Telegram account is linked to Memos
 - `/me`: alias of `/account`
+- `/cancel`: leave memo edit mode
 - `/unlink`: remove the saved Memos token for your Telegram account
 - `/ping`: show admin-only backend diagnostics
 
@@ -103,6 +107,25 @@ go run ./cmd/memogram
 
 5. Send a message to the bot. It should reply with a saved memo link and action buttons.
 
+## Telegram Workflow
+
+After a memo is saved or shown in search results, the bot sends a memo card with:
+
+- a direct link to the memo in Memos
+- inline buttons for `Public`, `Protected`, `Private`, `Pin`, `Edit`, and `Delete`
+
+Search behavior:
+
+- `/search <words>` returns the first page of matching memos
+- if more matches exist, the bot shows a `More Results` button to load the next page
+
+Edit behavior:
+
+- press `Edit` on a memo card
+- the bot shows the current content and waits for replacement text
+- send the replacement text as a normal Telegram message
+- use `/cancel` if you want to leave edit mode without changing the memo
+
 ## Docker
 
 Build the image:
@@ -148,6 +171,8 @@ Artifacts are written to `build/`.
 - If `ADMIN_USERNAMES` is empty, `/ping` diagnostics are disabled for everyone.
 - Media albums are grouped so multiple items from the same Telegram media group attach to a single memo.
 - The bot replies with a direct memo link based on the Memos instance URL when available.
+- Search results are shown in pages of 5 memos at a time.
+- While a memo edit is in progress, the next text message from that Telegram user replaces the memo content.
 
 ## Development
 

@@ -20,7 +20,20 @@ type Service struct {
 	mediaGroupCache sync.Map
 	mediaGroupMutex sync.Mutex
 
+	pendingEdits sync.Map
+
+	searchSessionMutex   sync.Mutex
+	searchSessionCounter uint64
+	searchSessions       map[string]searchSession
+
 	instanceProfile *domain.InstanceProfile
+}
+
+type searchSession struct {
+	UserID int64
+	Query  string
+	Offset int
+	Limit  int
 }
 
 func NewService(backend Backend, store TokenStore, dataFile string, allowedUsernames []string, adminUsernames []string) *Service {
@@ -40,6 +53,7 @@ func NewService(backend Backend, store TokenStore, dataFile string, allowedUsern
 		dataFile:         dataFile,
 		allowedUsernames: allowedSet,
 		adminUsernames:   adminSet,
+		searchSessions:   make(map[string]searchSession),
 	}
 }
 
