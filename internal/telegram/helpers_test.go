@@ -11,44 +11,28 @@ import (
 
 func TestKeyboard(t *testing.T) {
 	markup := keyboard(&domain.Memo{Name: "memos/77"})
-	if len(markup.InlineKeyboard) != 3 {
-		t.Fatalf("expected 3 rows, got %d", len(markup.InlineKeyboard))
+	if len(markup.InlineKeyboard) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(markup.InlineKeyboard))
 	}
 	if got := markup.InlineKeyboard[0][0].CallbackData; got != "public memos/77" {
 		t.Fatalf("unexpected callback data %q", got)
 	}
-	if got := markup.InlineKeyboard[0][1].CallbackData; got != "protected memos/77" {
-		t.Fatalf("unexpected protected callback %q", got)
-	}
-	if got := markup.InlineKeyboard[1][1].CallbackData; got != "edit memos/77" {
-		t.Fatalf("unexpected edit callback %q", got)
-	}
-	if got := markup.InlineKeyboard[2][0].CallbackData; got != "delete memos/77" {
+	if got := markup.InlineKeyboard[1][0].CallbackData; got != "delete memos/77" {
 		t.Fatalf("unexpected delete callback %q", got)
 	}
 }
 
-func TestFormatMemoCard(t *testing.T) {
-	got := formatMemoCard(domain.Memo{
-		Name:       "memo_[1]",
-		Content:    "line one",
-		Visibility: domain.VisibilityPrivate,
-		Pinned:     true,
-	}, "https://example.test/")
-	want := "*PRIVATE* [memo\\_\\[1\\]](https://example.test) 📌\nline one"
+func TestFormatMemoSavedMessage(t *testing.T) {
+	got := formatMemoSavedMessage(domain.VisibilityPrivate, "memo_[1]", "https://example.test/", "abc")
+	want := "Content saved as *PRIVATE* with [memo\\_\\[1\\]](https://example.test/memos/abc)"
 	if got != want {
 		t.Fatalf("unexpected message:\nwant: %q\ngot:  %q", want, got)
 	}
 }
 
-func TestFormatMemoUpdatedCard(t *testing.T) {
-	got := formatMemoUpdatedCard(domain.Memo{
-		Name:       "memos/abc",
-		Content:    "content",
-		Visibility: domain.VisibilityProtected,
-		Pinned:     true,
-	}, "https://example.test")
-	want := "Memo updated\n*PROTECTED* [memos/abc](https://example.test/memos/abc) 📌\ncontent"
+func TestFormatMemoUpdatedMessage(t *testing.T) {
+	got := formatMemoUpdatedMessage(domain.VisibilityProtected, "memo", "https://example.test", "abc", "📌")
+	want := "Memo updated as *PROTECTED* with [memo](https://example.test/memos/abc) 📌"
 	if got != want {
 		t.Fatalf("unexpected message:\nwant: %q\ngot:  %q", want, got)
 	}
@@ -104,12 +88,5 @@ func TestForwardedFrom(t *testing.T) {
 	}
 	if got := forwardedFrom(channelOrigin); got.Name != "Channel" || got.Username != "channelname" {
 		t.Fatalf("unexpected channel forward info: %+v", got)
-	}
-}
-
-func TestSplitCallbackData(t *testing.T) {
-	parts := splitCallbackData("searchmore 12")
-	if len(parts) != 2 || parts[0] != "searchmore" || parts[1] != "12" {
-		t.Fatalf("unexpected split result: %#v", parts)
 	}
 }
