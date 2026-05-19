@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -100,7 +101,7 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 
 	t.bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:              message.Chat.ID,
-		Text:                fmt.Sprintf("Content saved as %s with [%s](%s/memos/%s)", memo.Visibility, memo.Name, t.service.MemoBaseURL(), memoUID),
+		Text:                formatMemoSavedMessage(memo.Visibility, memo.Name, t.service.MemoBaseURL(), memoUID),
 		ParseMode:           models.ParseModeMarkdown,
 		DisableNotification: true,
 		ReplyParameters: &models.ReplyParameters{
@@ -108,6 +109,15 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 		},
 		ReplyMarkup: keyboard(memo),
 	})
+}
+
+func formatMemoSavedMessage(visibility domain.Visibility, memoName string, baseURL string, memoUID string) string {
+	return fmt.Sprintf(
+		"Content saved as *%s* with [%s](%s)",
+		escapeMarkdownV2(string(visibility)),
+		escapeMarkdownV2(memoName),
+		escapeMarkdownV2URL(strings.TrimRight(baseURL, "/")+"/memos/"+memoUID),
+	)
 }
 
 func (t *Bot) fetchFilePayload(ctx context.Context, fileID string) (domain.FilePayload, error) {

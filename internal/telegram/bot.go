@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -19,16 +20,21 @@ type Bot struct {
 	httpClient *http.Client
 }
 
-func NewBot(cfg *config.Config, service Service) (*Bot, error) {
+func NewBot(cfg *config.Config, service Service, httpClient *http.Client) (*Bot, error) {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	tg := &Bot{
 		service:    service,
 		config:     cfg,
-		httpClient: http.DefaultClient,
+		httpClient: httpClient,
 	}
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(tg.handleUpdate),
 		bot.WithCallbackQueryDataHandler("", bot.MatchTypePrefix, tg.handleCallbackQuery),
+		bot.WithHTTPClient(30*time.Second, httpClient),
 	}
 	if cfg.BotProxyAddr != "" {
 		opts = append(opts, bot.WithServerURL(cfg.BotProxyAddr))

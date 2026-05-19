@@ -1,6 +1,7 @@
 package store
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -91,5 +92,76 @@ func TestDeleteUserAccessToken(t *testing.T) {
 	}
 	if ok {
 		t.Fatal("expected delete to report missing user")
+	}
+}
+
+func TestSetUserAccessTokenRollsBackOnSaveFailure(t *testing.T) {
+	dataPath := filepath.Join(t.TempDir(), "data.txt")
+
+	store, err := NewFileTokenStore(dataPath)
+	if err != nil {
+		t.Fatalf("init store: %v", err)
+	}
+	if err := store.SetUserAccessToken(42, "token-one"); err != nil {
+		t.Fatalf("set initial token: %v", err)
+	}
+
+	blockingDir := filepath.Join(t.TempDir(), "blocked")
+	if err := os.MkdirAll(blockingDir, 0o755); err != nil {
+		t.Fatalf("mkdir blocked dir: %v", err)
+	}
+	store.dataPath = blockingDir
+
+	err = store.SetUserAccessToken(42, "token-two")
+	if err == nil {
+		t.Fatal("expected save failure")
+	}
+
+	token, ok := store.GetUserAccessToken(42)
+	if !ok || token != "token-one" {
+		t.Fatalf("expected rollback to token-one, got %q", token)
+	}
+}
+
+func TestDeleteUserAccessTokenRollsBackOnSaveFailure(t *testing.T) {
+	dataPath := filepath.Join(t.TempDir(), "data.txt")
+
+	store, err := NewFileTokenStore(dataPath)
+	if err != nil {
+		t.Fatalf("init store: %v", err)
+	}
+	if err := store.SetUserAccessToken(42, "token-one"); err != nil {
+		t.Fatalf("set initial token: %v", err)
+	}
+
+	blockingDir := filepath.Join(t.TempDir(), "blocked")
+	if err := os.MkdirAll(blockingDir, 0o755); err != nil {
+		t.Fatalf("mkdir blocked dir: %v", err)
+	}
+	store.dataPath = blockingDir
+
+	ok, err := store.DeleteUserAccessToken(42)
+	if !ok {
+		t.Fatal("expected delete to report existing user")
+	}
+	if err == nil {
+		t.Fatal("expected save failure")
+	}
+
+	token, stillPresent := store.GetUserAccessToken(42)
+	if !stillPresent || token != "token-one" {
+		t.Fatalf("expected rollback to keep token-one, got %q", token)
+	}
+}
+
+func TestDeleteUserAccessTokenMissingWithoutError(t *testing.T) {
+	store := &FileTokenStore{}
+
+	ok, err := store.DeleteUserAccessToken(99)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ok {
+		t.Fatal("expected missing user to report false")
 	}
 }

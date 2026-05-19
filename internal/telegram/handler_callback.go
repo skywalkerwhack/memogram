@@ -74,7 +74,7 @@ func (t *Bot) handleCallbackQuery(ctx context.Context, b *bot.Bot, update *model
 	b.EditMessageText(ctx, &bot.EditMessageTextParams{
 		ChatID:      update.CallbackQuery.Message.Message.Chat.ID,
 		MessageID:   update.CallbackQuery.Message.Message.ID,
-		Text:        fmt.Sprintf("Memo updated as %s with [%s](%s/memos/%s) %s", memo.Visibility, memo.Name, t.service.MemoBaseURL(), memoUID, pinnedMarker),
+		Text:        formatMemoUpdatedMessage(memo.Visibility, memo.Name, t.service.MemoBaseURL(), memoUID, pinnedMarker),
 		ParseMode:   models.ParseModeMarkdown,
 		ReplyMarkup: keyboard(memo),
 	})
@@ -83,6 +83,19 @@ func (t *Bot) handleCallbackQuery(ctx context.Context, b *bot.Bot, update *model
 		CallbackQueryID: update.CallbackQuery.ID,
 		Text:            "Memo updated",
 	})
+}
+
+func formatMemoUpdatedMessage(visibility domain.Visibility, memoName string, baseURL string, memoUID string, pinnedMarker string) string {
+	message := fmt.Sprintf(
+		"Memo updated as *%s* with [%s](%s)",
+		escapeMarkdownV2(string(visibility)),
+		escapeMarkdownV2(memoName),
+		escapeMarkdownV2URL(strings.TrimRight(baseURL, "/")+"/memos/"+memoUID),
+	)
+	if pinnedMarker != "" {
+		message += " " + escapeMarkdownV2(pinnedMarker)
+	}
+	return message
 }
 
 func failureText(action app.MemoAction) string {
