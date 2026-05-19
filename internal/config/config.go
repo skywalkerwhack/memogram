@@ -16,6 +16,7 @@ type rawConfig struct {
 	BotProxyAddr     string `env:"BOT_PROXY_ADDR"`
 	Data             string `env:"DATA"`
 	AllowedUsernames string `env:"ALLOWED_USERNAMES"`
+	AdminUsernames   string `env:"ADMIN_USERNAMES"`
 }
 
 type Config struct {
@@ -24,6 +25,7 @@ type Config struct {
 	BotProxyAddr     string
 	Data             string
 	AllowedUsernames []string
+	AdminUsernames   []string
 }
 
 func Load() (*Config, error) {
@@ -61,6 +63,7 @@ func Load() (*Config, error) {
 		BotProxyAddr:     raw.BotProxyAddr,
 		Data:             absDataPath,
 		AllowedUsernames: parseAllowedUsernames(raw.AllowedUsernames),
+		AdminUsernames:   parseAllowedUsernames(raw.AdminUsernames),
 	}, nil
 }
 

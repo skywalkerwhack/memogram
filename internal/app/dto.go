@@ -24,15 +24,19 @@ const (
 )
 
 type StatusReport struct {
-	ServerURL          string
-	DataFile           string
+	AccountLinked      bool
+	AccountTokenValid  bool
+	AccountDisplayName string
+}
+
+type HealthReport struct {
+	ServerURL        string
+	DataFile         string
 	BackendLatency     time.Duration
 	BackendAvailable   bool
 	BackendError       string
 	InstanceURL        string
 	AllowedUsernames   int
+	AdminUsernames     int
 	LinkedUsers        int
-	AccountLinked      bool
-	AccountTokenValid  bool
-	AccountDisplayName string
 }
