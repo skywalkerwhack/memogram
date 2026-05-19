@@ -12,12 +12,8 @@ func keyboard(memo *domain.Memo) *models.InlineKeyboardMarkup {
 		InlineKeyboard: [][]models.InlineKeyboardButton{
 			{
 				{Text: "Public", CallbackData: fmt.Sprintf("public %s", memo.Name)},
-				{Text: "Protected", CallbackData: fmt.Sprintf("protected %s", memo.Name)},
 				{Text: "Private", CallbackData: fmt.Sprintf("private %s", memo.Name)},
-			},
-			{
 				{Text: "Pin", CallbackData: fmt.Sprintf("pin %s", memo.Name)},
-				{Text: "Edit", CallbackData: fmt.Sprintf("edit %s", memo.Name)},
 			},
 			{
 				{Text: "Delete", CallbackData: fmt.Sprintf("delete %s", memo.Name)},

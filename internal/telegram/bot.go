@@ -60,7 +60,6 @@ func (t *Bot) Start(ctx context.Context) {
 		{Command: "search", Description: "Search for the memos"},
 		{Command: "account", Description: "Show your current account link"},
 		{Command: "me", Description: "Alias of account"},
-		{Command: "cancel", Description: "Cancel the current memo edit"},
 		{Command: "ping", Description: "Show admin backend diagnostics"},
 	}
 	if _, err := t.bot.SetMyCommands(ctx, &bot.SetMyCommandsParams{Commands: commands}); err != nil {

@@ -82,7 +82,7 @@ func (b *Backend) UpdateMemo(ctx context.Context, accessToken string, memo *doma
 			Visibility: visibilityToProto(memo.Visibility),
 			Pinned:     memo.Pinned,
 		},
-		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"content", "visibility", "pinned"}},
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"visibility", "pinned"}},
 	}))
 	if err != nil {
 		return nil, err

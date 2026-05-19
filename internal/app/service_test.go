@@ -301,43 +301,6 @@ func TestServiceSearchMemosInvalidToken(t *testing.T) {
 	}
 }
 
-func TestServiceSearchMemosPage(t *testing.T) {
-	store := &fakeTokenStore{tokens: map[int64]string{7: "token"}}
-	service := NewService(fakeBackend{
-		baseURL: "https://example.test",
-		getCurrentUser: func(context.Context, string) (*domain.User, error) {
-			return &domain.User{Name: "users/123"}, nil
-		},
-		searchMemos: func(_ context.Context, accessToken string, query string, creatorID *int64, limit int) ([]domain.Memo, error) {
-			if limit != 6 {
-				t.Fatalf("expected expanded limit 6, got %d", limit)
-			}
-			return []domain.Memo{
-				{Name: "memos/1"},
-				{Name: "memos/2"},
-				{Name: "memos/3"},
-				{Name: "memos/4"},
-				{Name: "memos/5"},
-				{Name: "memos/6"},
-			}, nil
-		},
-	}, store, "data.txt", nil, nil)
-
-	page, err := service.SearchMemosPage(context.Background(), 7, "needle", 2, 3)
-	if err != nil {
-		t.Fatalf("SearchMemosPage returned error: %v", err)
-	}
-	if page.Query != "needle" || page.Offset != 2 || page.Limit != 3 {
-		t.Fatalf("unexpected page metadata: %+v", page)
-	}
-	if !page.HasMore {
-		t.Fatal("expected more results")
-	}
-	if len(page.Memos) != 3 || page.Memos[0].Name != "memos/3" || page.Memos[2].Name != "memos/5" {
-		t.Fatalf("unexpected page memos: %+v", page.Memos)
-	}
-}
-
 func TestServiceIsUserAdmin(t *testing.T) {
 	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", nil, []string{"Admin", " Root "})
 
@@ -468,55 +431,6 @@ func TestServiceUpdateMemoActionUnknown(t *testing.T) {
 	_, _, err := service.UpdateMemoAction(context.Background(), 7, MemoAction("bad"), "memos/1")
 	if err == nil {
 		t.Fatal("expected error for unknown action")
-	}
-}
-
-func TestServiceBeginAndUpdatePendingMemoEdit(t *testing.T) {
-	store := &fakeTokenStore{tokens: map[int64]string{7: "token"}}
-	var updatedMemo *domain.Memo
-	service := NewService(fakeBackend{
-		baseURL: "https://example.test",
-		getMemo: func(_ context.Context, _ string, name string) (*domain.Memo, error) {
-			return &domain.Memo{Name: name, Content: "before", Visibility: domain.VisibilityPrivate}, nil
-		},
-		updateMemo: func(_ context.Context, _ string, memo *domain.Memo) (*domain.Memo, error) {
-			updatedMemo = memo
-			return memo, nil
-		},
-	}, store, "data.txt", nil, nil)
-
-	memo, err := service.BeginMemoEdit(context.Background(), 7, "memos/9")
-	if err != nil {
-		t.Fatalf("BeginMemoEdit returned error: %v", err)
-	}
-	if memo.Name != "memos/9" || !service.HasPendingMemoEdit(7) {
-		t.Fatalf("expected pending edit to be stored, got memo=%+v pending=%v", memo, service.HasPendingMemoEdit(7))
-	}
-
-	updated, err := service.UpdatePendingMemoContent(context.Background(), 7, "after")
-	if err != nil {
-		t.Fatalf("UpdatePendingMemoContent returned error: %v", err)
-	}
-	if updatedMemo == nil || updatedMemo.Content != "after" {
-		t.Fatalf("expected updated content, got %+v", updatedMemo)
-	}
-	if updated.Content != "after" {
-		t.Fatalf("expected returned memo content to be updated, got %+v", updated)
-	}
-	if service.HasPendingMemoEdit(7) {
-		t.Fatal("expected pending edit to be cleared after update")
-	}
-}
-
-func TestServiceCancelMemoEdit(t *testing.T) {
-	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", nil, nil)
-	service.pendingEdits.Store(int64(7), "memos/1")
-
-	if !service.CancelMemoEdit(7) {
-		t.Fatal("expected cancel to report existing edit")
-	}
-	if service.CancelMemoEdit(7) {
-		t.Fatal("expected second cancel to report no edit")
 	}
 }
 

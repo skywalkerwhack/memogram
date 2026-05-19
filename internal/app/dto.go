@@ -23,14 +23,6 @@ const (
 	ActionDelete    MemoAction = "delete"
 )
 
-type SearchPage struct {
-	Query   string
-	Offset  int
-	Limit   int
-	HasMore bool
-	Memos   []domain.Memo
-}
-
 type StatusReport struct {
 	AccountLinked      bool
 	AccountTokenValid  bool
@@ -40,11 +32,11 @@ type StatusReport struct {
 type HealthReport struct {
 	ServerURL        string
 	DataFile         string
-	BackendLatency   time.Duration
-	BackendAvailable bool
-	BackendError     string
-	InstanceURL      string
-	AllowedUsernames int
-	AdminUsernames   int
-	LinkedUsers      int
+	BackendLatency     time.Duration
+	BackendAvailable   bool
+	BackendError       string
+	InstanceURL        string
+	AllowedUsernames   int
+	AdminUsernames     int
+	LinkedUsers        int
 }

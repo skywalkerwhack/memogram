@@ -29,10 +29,6 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 		content = formatContent(content, contentEntities)
 	}
 
-	if updated := t.tryHandlePendingEdit(ctx, message, content, hasAttachment); updated {
-		return
-	}
-
 	if content == "" && !hasAttachment {
 		t.bot.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: message.Chat.ID,
@@ -94,7 +90,25 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 		}
 	}
 
-	t.sendMemoCard(ctx, message.Chat.ID, *memo, message.ID)
+	memoUID, err := domain.ExtractMemoUIDFromName(memo.Name)
+	if err != nil {
+		t.bot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: message.Chat.ID,
+			Text:   "Failed to save memo",
+		})
+		return
+	}
+
+	t.bot.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID:              message.Chat.ID,
+		Text:                formatMemoSavedMessage(memo.Visibility, memo.Name, t.service.MemoBaseURL(), memoUID),
+		ParseMode:           models.ParseModeMarkdown,
+		DisableNotification: true,
+		ReplyParameters: &models.ReplyParameters{
+			MessageID: message.ID,
+		},
+		ReplyMarkup: keyboard(memo),
+	})
 }
 
 func formatMemoSavedMessage(visibility domain.Visibility, memoName string, baseURL string, memoUID string) string {
@@ -104,46 +118,6 @@ func formatMemoSavedMessage(visibility domain.Visibility, memoName string, baseU
 		escapeMarkdownV2(memoName),
 		escapeMarkdownV2URL(strings.TrimRight(baseURL, "/")+"/memos/"+memoUID),
 	)
-}
-
-func (t *Bot) tryHandlePendingEdit(ctx context.Context, message *models.Message, content string, hasAttachment bool) bool {
-	if !t.service.HasPendingMemoEdit(message.From.ID) {
-		return false
-	}
-
-	if hasAttachment {
-		t.bot.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: message.Chat.ID,
-			Text:   "Editing only accepts text. Send the replacement text or /cancel.",
-		})
-		return true
-	}
-	if strings.TrimSpace(content) == "" {
-		t.bot.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: message.Chat.ID,
-			Text:   "Send the replacement text for the memo, or /cancel.",
-		})
-		return true
-	}
-
-	updatedMemo, err := t.service.UpdatePendingMemoContent(ctx, message.From.ID, content)
-	if err == nil {
-		t.sendMemoUpdateCard(ctx, message.Chat.ID, *updatedMemo, message.ID)
-		return true
-	}
-	if errors.Is(err, domain.ErrMemoEditNotFound) {
-		return false
-	}
-	if errors.Is(err, domain.ErrAccountNotLinked) {
-		t.bot.SendMessage(ctx, &bot.SendMessageParams{
-			ChatID: message.Chat.ID,
-			Text:   "Please start the bot with /start <access_token>",
-		})
-		return true
-	}
-
-	t.sendError(message.Chat.ID, fmt.Errorf("failed to update memo: %w", err))
-	return true
 }
 
 func (t *Bot) fetchFilePayload(ctx context.Context, fileID string) (domain.FilePayload, error) {
