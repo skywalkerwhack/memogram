@@ -44,12 +44,14 @@ func TestLoadFromEnvironment(t *testing.T) {
 	unsetEnv(t, "BOT_PROXY_ADDR")
 	unsetEnv(t, "DATA")
 	unsetEnv(t, "ALLOWED_USERNAMES")
+	unsetEnv(t, "ADMIN_USERNAMES")
 
 	t.Setenv("SERVER_ADDR", "dns:localhost:5230")
 	t.Setenv("BOT_TOKEN", "bot-token")
 	t.Setenv("BOT_PROXY_ADDR", "http://proxy.test")
 	t.Setenv("DATA", "tokens.txt")
 	t.Setenv("ALLOWED_USERNAMES", "Alice,bob")
+	t.Setenv("ADMIN_USERNAMES", "Root")
 
 	cfg, err := Load()
 	if err != nil {
@@ -71,6 +73,9 @@ func TestLoadFromEnvironment(t *testing.T) {
 	if want := []string{"alice", "bob"}; !reflect.DeepEqual(cfg.AllowedUsernames, want) {
 		t.Fatalf("expected usernames %v, got %v", want, cfg.AllowedUsernames)
 	}
+	if want := []string{"root"}; !reflect.DeepEqual(cfg.AdminUsernames, want) {
+		t.Fatalf("expected admin usernames %v, got %v", want, cfg.AdminUsernames)
+	}
 }
 
 func TestLoadFromDotEnvAndDefaultDataPath(t *testing.T) {
@@ -81,6 +86,7 @@ func TestLoadFromDotEnvAndDefaultDataPath(t *testing.T) {
 	unsetEnv(t, "BOT_PROXY_ADDR")
 	unsetEnv(t, "DATA")
 	unsetEnv(t, "ALLOWED_USERNAMES")
+	unsetEnv(t, "ADMIN_USERNAMES")
 
 	envContent := "SERVER_ADDR=https://memos.example.test\nBOT_TOKEN=dotenv-token\nALLOWED_USERNAMES=alice\n"
 	if err := os.WriteFile(filepath.Join(tempDir, ".env"), []byte(envContent), 0o644); err != nil {
@@ -111,6 +117,7 @@ func TestLoadRejectsDirectoryDataPath(t *testing.T) {
 	unsetEnv(t, "BOT_PROXY_ADDR")
 	unsetEnv(t, "DATA")
 	unsetEnv(t, "ALLOWED_USERNAMES")
+	unsetEnv(t, "ADMIN_USERNAMES")
 
 	dataDir := filepath.Join(tempDir, "store")
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {

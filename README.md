@@ -29,9 +29,10 @@ Supported bot commands:
 - `/start <access_token>`: link your Telegram account to Memos
 - `/help`: show help
 - `/search <words>`: search your memos
-- `/status`: show bot and account status
+- `/account`: show whether your Telegram account is linked to Memos
+- `/me`: alias of `/account`
 - `/unlink`: remove the saved Memos token for your Telegram account
-- `/ping`: quick health check
+- `/ping`: show admin-only backend diagnostics
 
 ## How It Works
 
@@ -61,6 +62,7 @@ BOT_TOKEN=your_telegram_bot_token
 BOT_PROXY_ADDR=
 DATA=data.txt
 ALLOWED_USERNAMES=
+ADMIN_USERNAMES=
 ```
 
 ### Environment Variables
@@ -70,6 +72,7 @@ ALLOWED_USERNAMES=
 - `BOT_PROXY_ADDR`: optional Telegram Bot API server URL or proxy endpoint.
 - `DATA`: path to the local token storage file. Default: `data.txt`.
 - `ALLOWED_USERNAMES`: optional comma-separated allowlist of Telegram usernames. If empty, any Telegram username can use the bot.
+- `ADMIN_USERNAMES`: optional comma-separated list of Telegram usernames allowed to use `/ping`. If empty, diagnostic `/ping` is unavailable.
 
 ## Quick Start
 
@@ -84,6 +87,7 @@ cp .env.example .env
 - `SERVER_ADDR`
 - `BOT_TOKEN`
 - optionally `ALLOWED_USERNAMES`
+- optionally `ADMIN_USERNAMES` if you want admin-only `/ping` diagnostics
 
 3. Run the bot:
 
@@ -115,6 +119,7 @@ docker run --rm \
   -e SERVER_ADDR=http://host.docker.internal:5230 \
   -e BOT_TOKEN=your_telegram_bot_token \
   -e ALLOWED_USERNAMES=yourtelegramusername \
+  -e ADMIN_USERNAMES=yourtelegramusername \
   -v "$(pwd)/data.txt:/app/data.txt" \
   memogram
 ```
@@ -140,6 +145,7 @@ Artifacts are written to `build/`.
 
 - The token store is a plain local file managed by the bot. Protect it like a secret.
 - If `ALLOWED_USERNAMES` is set, users without a Telegram username cannot use the bot.
+- If `ADMIN_USERNAMES` is empty, `/ping` diagnostics are disabled for everyone.
 - Media albums are grouped so multiple items from the same Telegram media group attach to a single memo.
 - The bot replies with a direct memo link based on the Memos instance URL when available.
 

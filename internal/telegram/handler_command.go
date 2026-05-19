@@ -18,7 +18,8 @@ const (
 	commandHelp   = "/help"
 	commandUnlink = "/unlink"
 	commandSearch = "/search"
-	commandStatus = "/status"
+	commandAccount = "/account"
+	commandMe      = "/me"
 	commandPing   = "/ping"
 )
 
@@ -34,8 +35,10 @@ func (t *Bot) handleCommand(ctx context.Context, update *models.Update) bool {
 		t.unlinkHandler(ctx, update)
 	case strings.HasPrefix(message.Text, commandSearch+" ") || message.Text == commandSearch:
 		t.searchHandler(ctx, update)
-	case strings.HasPrefix(message.Text, commandStatus+" ") || message.Text == commandStatus:
-		t.statusHandler(ctx, update)
+	case strings.HasPrefix(message.Text, commandAccount+" ") || message.Text == commandAccount:
+		t.accountHandler(ctx, update)
+	case strings.HasPrefix(message.Text, commandMe+" ") || message.Text == commandMe:
+		t.accountHandler(ctx, update)
 	case strings.HasPrefix(message.Text, commandPing+" ") || message.Text == commandPing:
 		t.pingHandler(ctx, update)
 	default:
@@ -79,8 +82,9 @@ func (t *Bot) helpHandler(ctx context.Context, update *models.Update) {
 		"/start <access_token> - link this Telegram account to Memos",
 		"/unlink - remove the saved Memos token for this Telegram account",
 		"/search <words> - search your saved memos",
-		"/status - show bot and account status",
-		"/ping - check whether the bot is alive",
+		"/account - show your current Memos account link",
+		"/me - alias of /account",
+		"/ping - show admin-only backend diagnostics",
 		"/help - show this help message",
 		"",
 		"Send text, photos, voice messages, videos, or documents to save them as memos.",
@@ -160,27 +164,12 @@ func (t *Bot) searchHandler(ctx context.Context, update *models.Update) {
 	}
 }
 
-func (t *Bot) statusHandler(ctx context.Context, update *models.Update) {
+func (t *Bot) accountHandler(ctx context.Context, update *models.Update) {
 	report := t.service.GetStatus(ctx, update.Message.From.ID)
 
 	lines := []string{
-		"Memogram status",
-		fmt.Sprintf("Server: %s", report.ServerURL),
-		fmt.Sprintf("Data file: %s", report.DataFile),
-		backendStatusLine(report),
+		"Memogram account",
 	}
-
-	if report.InstanceURL != "" {
-		lines = append(lines, fmt.Sprintf("Instance URL: %s", report.InstanceURL))
-	}
-
-	if report.AllowedUsernames == 0 {
-		lines = append(lines, "Allowed usernames: unrestricted")
-	} else {
-		lines = append(lines, fmt.Sprintf("Allowed usernames: %d configured", report.AllowedUsernames))
-	}
-
-	lines = append(lines, fmt.Sprintf("Linked Telegram users: %d", report.LinkedUsers))
 
 	switch {
 	case !report.AccountLinked:
@@ -203,7 +192,49 @@ func (t *Bot) statusHandler(ctx context.Context, update *models.Update) {
 	})
 }
 
-func backendStatusLine(report app.StatusReport) string {
+func (t *Bot) pingHandler(ctx context.Context, update *models.Update) {
+	username := update.Message.From.Username
+	if !t.service.IsUserAdmin(username) {
+		t.bot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   "Ping diagnostics are only available to configured admins.",
+		})
+		return
+	}
+
+	report := t.service.GetHealth(ctx)
+	lines := []string{
+		"Memogram ping",
+		fmt.Sprintf("Server: %s", report.ServerURL),
+		fmt.Sprintf("Data file: %s", report.DataFile),
+		backendHealthLine(report),
+	}
+
+	if report.InstanceURL != "" {
+		lines = append(lines, fmt.Sprintf("Instance URL: %s", report.InstanceURL))
+	}
+
+	if report.AllowedUsernames == 0 {
+		lines = append(lines, "Allowed usernames: unrestricted")
+	} else {
+		lines = append(lines, fmt.Sprintf("Allowed usernames: %d configured", report.AllowedUsernames))
+	}
+
+	if report.AdminUsernames == 0 {
+		lines = append(lines, "Admin usernames: not configured")
+	} else {
+		lines = append(lines, fmt.Sprintf("Admin usernames: %d configured", report.AdminUsernames))
+	}
+
+	lines = append(lines, fmt.Sprintf("Linked Telegram users: %d", report.LinkedUsers))
+
+	t.bot.SendMessage(ctx, &bot.SendMessageParams{
+		ChatID: update.Message.Chat.ID,
+		Text:   strings.Join(lines, "\n"),
+	})
+}
+
+func backendHealthLine(report app.HealthReport) string {
 	if !report.BackendAvailable {
 		return fmt.Sprintf("Backend latency: unavailable (%s)", report.BackendError)
 	}
@@ -219,11 +250,4 @@ func formatLatency(latency time.Duration) string {
 	default:
 		return latency.Round(10 * time.Millisecond).String()
 	}
-}
-
-func (t *Bot) pingHandler(ctx context.Context, update *models.Update) {
-	t.bot.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: update.Message.Chat.ID,
-		Text:   "Pong!",
-	})
 }

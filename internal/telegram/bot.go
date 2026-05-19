@@ -58,8 +58,9 @@ func (t *Bot) Start(ctx context.Context) {
 		{Command: "help", Description: "Show available commands"},
 		{Command: "unlink", Description: "Disconnect your linked account"},
 		{Command: "search", Description: "Search for the memos"},
-		{Command: "status", Description: "Show bot and account status"},
-		{Command: "ping", Description: "Ping the bot"},
+		{Command: "account", Description: "Show your current account link"},
+		{Command: "me", Description: "Alias of account"},
+		{Command: "ping", Description: "Show admin backend diagnostics"},
 	}
 	if _, err := t.bot.SetMyCommands(ctx, &bot.SetMyCommandsParams{Commands: commands}); err != nil {
 		slog.Error("failed to set bot commands", slog.Any("err", err))

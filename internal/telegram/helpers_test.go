@@ -47,13 +47,13 @@ func TestFailureText(t *testing.T) {
 	}
 }
 
-func TestBackendStatusLine(t *testing.T) {
-	line := backendStatusLine(app.StatusReport{BackendAvailable: false, BackendError: "offline"})
+func TestBackendHealthLine(t *testing.T) {
+	line := backendHealthLine(app.HealthReport{BackendAvailable: false, BackendError: "offline"})
 	if line != "Backend latency: unavailable (offline)" {
 		t.Fatalf("unexpected unavailable line %q", line)
 	}
 
-	line = backendStatusLine(app.StatusReport{BackendAvailable: true, BackendLatency: 1500 * time.Microsecond})
+	line = backendHealthLine(app.HealthReport{BackendAvailable: true, BackendLatency: 1500 * time.Microsecond})
 	if line != "Backend latency: 2ms" {
 		t.Fatalf("unexpected latency line %q", line)
 	}

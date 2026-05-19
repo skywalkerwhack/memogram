@@ -118,7 +118,7 @@ func (s *fakeTokenStore) CountUserAccessTokens() int {
 }
 
 func TestServiceIsUserAllowed(t *testing.T) {
-	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", []string{"Alice", " Bob "})
+	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", []string{"Alice", " Bob "}, nil)
 
 	if !service.IsUserAllowed("alice") {
 		t.Fatal("expected alice to be allowed")
@@ -141,7 +141,7 @@ func TestServiceLinkAccountStoresTokenAndUsesDisplayFallbacks(t *testing.T) {
 		getCurrentUser: func(context.Context, string) (*domain.User, error) {
 			return &domain.User{Username: "fallback-user"}, nil
 		},
-	}, store, "data.txt", nil)
+	}, store, "data.txt", nil, nil)
 
 	displayName, err := service.LinkAccount(context.Background(), 42, "secret")
 	if err != nil {
@@ -161,7 +161,7 @@ func TestServiceLinkAccountInvalidToken(t *testing.T) {
 		getCurrentUser: func(context.Context, string) (*domain.User, error) {
 			return nil, errors.New("unauthorized")
 		},
-	}, &fakeTokenStore{}, "data.txt", nil)
+	}, &fakeTokenStore{}, "data.txt", nil, nil)
 
 	_, err := service.LinkAccount(context.Background(), 42, "bad-token")
 	if !errors.Is(err, domain.ErrInvalidToken) {
@@ -181,7 +181,7 @@ func TestServiceCreateMemoWithForwardedContent(t *testing.T) {
 			gotContent = content
 			return &domain.Memo{Name: "memos/1", Content: content}, nil
 		},
-	}, store, "data.txt", nil)
+	}, store, "data.txt", nil, nil)
 
 	memo, err := service.CreateMemo(context.Background(), CreateMemoInput{
 		UserID:  7,
@@ -213,7 +213,7 @@ func TestServiceCreateMemoUsesMediaGroupCache(t *testing.T) {
 			createCalls++
 			return &domain.Memo{Name: fmt.Sprintf("memos/%d", createCalls)}, nil
 		},
-	}, store, "data.txt", nil)
+	}, store, "data.txt", nil, nil)
 
 	first, err := service.CreateMemo(context.Background(), CreateMemoInput{
 		UserID:        7,
@@ -241,7 +241,7 @@ func TestServiceCreateMemoUsesMediaGroupCache(t *testing.T) {
 }
 
 func TestServiceAttachFileRequiresLinkedAccount(t *testing.T) {
-	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", nil)
+	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", nil, nil)
 
 	err := service.AttachFile(context.Background(), 10, "memos/1", domain.FilePayload{})
 	if !errors.Is(err, domain.ErrAccountNotLinked) {
@@ -269,7 +269,7 @@ func TestServiceSearchMemosIncludesCreatorID(t *testing.T) {
 			gotLimit = limit
 			return []domain.Memo{{Name: "memos/1"}}, nil
 		},
-	}, store, "data.txt", nil)
+	}, store, "data.txt", nil, nil)
 
 	memos, err := service.SearchMemos(context.Background(), 7, "needle", 3)
 	if err != nil {
@@ -293,7 +293,7 @@ func TestServiceSearchMemosInvalidToken(t *testing.T) {
 		getCurrentUser: func(context.Context, string) (*domain.User, error) {
 			return nil, errors.New("unauthorized")
 		},
-	}, store, "data.txt", nil)
+	}, store, "data.txt", nil, nil)
 
 	_, err := service.SearchMemos(context.Background(), 7, "needle", 3)
 	if !errors.Is(err, domain.ErrInvalidToken) {
@@ -301,38 +301,74 @@ func TestServiceSearchMemosInvalidToken(t *testing.T) {
 	}
 }
 
-func TestServiceGetStatusIncludesAccountAndInstanceData(t *testing.T) {
+func TestServiceIsUserAdmin(t *testing.T) {
+	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", nil, []string{"Admin", " Root "})
+
+	if !service.IsUserAdmin("admin") {
+		t.Fatal("expected admin to be allowed")
+	}
+	if !service.IsUserAdmin("ROOT") {
+		t.Fatal("expected root to be allowed")
+	}
+	if service.IsUserAdmin("") {
+		t.Fatal("expected empty username not to be admin")
+	}
+	if service.IsUserAdmin("alice") {
+		t.Fatal("expected alice not to be admin")
+	}
+}
+
+func TestServiceGetStatusIncludesLinkedAccountData(t *testing.T) {
 	store := &fakeTokenStore{tokens: map[int64]string{7: "token"}}
 	service := NewService(fakeBackend{
 		baseURL: "https://example.test",
-		getInstanceProfile: func(context.Context) (*domain.InstanceProfile, error) {
-			return &domain.InstanceProfile{InstanceURL: "https://memos.example.test"}, nil
-		},
 		getCurrentUser: func(context.Context, string) (*domain.User, error) {
 			return &domain.User{DisplayName: "Display Name"}, nil
 		},
-	}, store, "/tmp/data.txt", []string{"alice"})
+	}, store, "/tmp/data.txt", []string{"alice"}, []string{"admin"})
 
-	service.Start(context.Background())
 	report := service.GetStatus(context.Background(), 7)
 
-	if !report.BackendAvailable {
-		t.Fatalf("expected backend to be available, got error %q", report.BackendError)
-	}
-	if report.InstanceURL != "https://memos.example.test" {
-		t.Fatalf("expected instance URL to be populated, got %q", report.InstanceURL)
-	}
 	if !report.AccountLinked || !report.AccountTokenValid {
 		t.Fatalf("expected linked valid account, got %+v", report)
 	}
 	if report.AccountDisplayName != "Display Name" {
 		t.Fatalf("expected display name, got %q", report.AccountDisplayName)
 	}
+}
+
+func TestServiceGetHealthIncludesAdminAndStoreData(t *testing.T) {
+	store := &fakeTokenStore{tokens: map[int64]string{7: "token"}}
+	service := NewService(fakeBackend{
+		baseURL: "https://example.test",
+		getInstanceProfile: func(context.Context) (*domain.InstanceProfile, error) {
+			return &domain.InstanceProfile{InstanceURL: "https://memos.example.test"}, nil
+		},
+	}, store, "/tmp/data.txt", []string{"alice"}, []string{"admin"})
+
+	service.Start(context.Background())
+	report := service.GetHealth(context.Background())
+
+	if !report.BackendAvailable {
+		t.Fatalf("expected backend to be available, got error %q", report.BackendError)
+	}
+	if report.ServerURL != "https://example.test" {
+		t.Fatalf("expected server URL, got %q", report.ServerURL)
+	}
+	if report.DataFile != "/tmp/data.txt" {
+		t.Fatalf("expected data file, got %q", report.DataFile)
+	}
+	if report.InstanceURL != "https://memos.example.test" {
+		t.Fatalf("expected instance URL to be populated, got %q", report.InstanceURL)
+	}
 	if report.LinkedUsers != 1 {
 		t.Fatalf("expected one linked user, got %d", report.LinkedUsers)
 	}
 	if report.AllowedUsernames != 1 {
 		t.Fatalf("expected one allowed username, got %d", report.AllowedUsernames)
+	}
+	if report.AdminUsernames != 1 {
+		t.Fatalf("expected one admin username, got %d", report.AdminUsernames)
 	}
 }
 
@@ -358,7 +394,7 @@ func TestServiceUpdateMemoActionPinAndDelete(t *testing.T) {
 			deleteCalls++
 			return nil
 		},
-	}, store, "data.txt", nil)
+	}, store, "data.txt", nil, nil)
 
 	updated, deleted, err := service.UpdateMemoAction(context.Background(), 7, ActionPin, "memos/1")
 	if err != nil {
@@ -390,7 +426,7 @@ func TestServiceUpdateMemoActionUnknown(t *testing.T) {
 		getMemo: func(context.Context, string, string) (*domain.Memo, error) {
 			return &domain.Memo{Name: "memos/1"}, nil
 		},
-	}, store, "data.txt", nil)
+	}, store, "data.txt", nil, nil)
 
 	_, _, err := service.UpdateMemoAction(context.Background(), 7, MemoAction("bad"), "memos/1")
 	if err == nil {
@@ -399,7 +435,7 @@ func TestServiceUpdateMemoActionUnknown(t *testing.T) {
 }
 
 func TestServiceMemoBaseURLFallsBackToBackendURL(t *testing.T) {
-	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", nil)
+	service := NewService(fakeBackend{baseURL: "https://example.test"}, &fakeTokenStore{}, "data.txt", nil, nil)
 	if got := service.MemoBaseURL(); got != "https://example.test" {
 		t.Fatalf("expected backend base URL fallback, got %q", got)
 	}

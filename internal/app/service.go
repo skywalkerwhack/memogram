@@ -15,6 +15,7 @@ type Service struct {
 	serverURL        string
 	dataFile         string
 	allowedUsernames map[string]struct{}
+	adminUsernames   map[string]struct{}
 
 	mediaGroupCache sync.Map
 	mediaGroupMutex sync.Mutex
@@ -22,10 +23,14 @@ type Service struct {
 	instanceProfile *domain.InstanceProfile
 }
 
-func NewService(backend Backend, store TokenStore, dataFile string, allowedUsernames []string) *Service {
+func NewService(backend Backend, store TokenStore, dataFile string, allowedUsernames []string, adminUsernames []string) *Service {
 	allowedSet := make(map[string]struct{}, len(allowedUsernames))
 	for _, username := range allowedUsernames {
 		allowedSet[strings.ToLower(strings.TrimSpace(username))] = struct{}{}
+	}
+	adminSet := make(map[string]struct{}, len(adminUsernames))
+	for _, username := range adminUsernames {
+		adminSet[strings.ToLower(strings.TrimSpace(username))] = struct{}{}
 	}
 
 	return &Service{
@@ -34,6 +39,7 @@ func NewService(backend Backend, store TokenStore, dataFile string, allowedUsern
 		serverURL:        backend.BaseURL(),
 		dataFile:         dataFile,
 		allowedUsernames: allowedSet,
+		adminUsernames:   adminSet,
 	}
 }
 
@@ -52,6 +58,14 @@ func (s *Service) IsUserAllowed(username string) bool {
 		return false
 	}
 	_, ok := s.allowedUsernames[strings.ToLower(strings.TrimSpace(username))]
+	return ok
+}
+
+func (s *Service) IsUserAdmin(username string) bool {
+	if len(s.adminUsernames) == 0 || username == "" {
+		return false
+	}
+	_, ok := s.adminUsernames[strings.ToLower(strings.TrimSpace(username))]
 	return ok
 }
 
