@@ -75,7 +75,7 @@ func (t *Bot) handleCallbackQuery(ctx context.Context, b *bot.Bot, update *model
 		ChatID:      update.CallbackQuery.Message.Message.Chat.ID,
 		MessageID:   update.CallbackQuery.Message.Message.ID,
 		Text:        formatMemoUpdatedMessage(memo.Visibility, memo.Name, t.service.MemoBaseURL(), memoUID, pinnedMarker),
-		ParseMode:   models.ParseModeMarkdown,
+		ParseMode:   telegramMarkdownParseMode,
 		ReplyMarkup: keyboard(memo),
 	})
 

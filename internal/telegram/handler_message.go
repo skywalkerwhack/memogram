@@ -102,7 +102,7 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 	t.bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:              message.Chat.ID,
 		Text:                formatMemoSavedMessage(memo.Visibility, memo.Name, t.service.MemoBaseURL(), memoUID),
-		ParseMode:           models.ParseModeMarkdown,
+		ParseMode:           telegramMarkdownParseMode,
 		DisableNotification: true,
 		ReplyParameters: &models.ReplyParameters{
 			MessageID: message.ID,
@@ -125,6 +125,10 @@ func (t *Bot) fetchFilePayload(ctx context.Context, fileID string) (domain.FileP
 	if err != nil {
 		return domain.FilePayload{}, err
 	}
+	maxBytes := t.config.MaxAttachmentBytes
+	if maxBytes > 0 && file.FileSize > maxBytes {
+		return domain.FilePayload{}, fmt.Errorf("file is too large: %d bytes exceeds limit %d", file.FileSize, maxBytes)
+	}
 
 	fileLink := t.bot.FileDownloadLink(file)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fileLink, nil)
@@ -141,8 +145,11 @@ func (t *Bot) fetchFilePayload(ctx context.Context, fileID string) (domain.FileP
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusBadRequest {
 		return domain.FilePayload{}, fmt.Errorf("download failed with status %s", response.Status)
 	}
+	if maxBytes > 0 && response.ContentLength > maxBytes {
+		return domain.FilePayload{}, fmt.Errorf("file is too large: %d bytes exceeds limit %d", response.ContentLength, maxBytes)
+	}
 
-	bytes, err := io.ReadAll(response.Body)
+	bytes, err := readAllLimited(response.Body, maxBytes)
 	if err != nil {
 		return domain.FilePayload{}, fmt.Errorf("read file: %w", err)
 	}
@@ -160,6 +167,21 @@ func (t *Bot) fetchFilePayload(ctx context.Context, fileID string) (domain.FileP
 		ContentType: contentType,
 		Bytes:       bytes,
 	}, nil
+}
+
+func readAllLimited(reader io.Reader, maxBytes int64) ([]byte, error) {
+	if maxBytes <= 0 {
+		return io.ReadAll(reader)
+	}
+
+	bytes, err := io.ReadAll(io.LimitReader(reader, maxBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(bytes)) > maxBytes {
+		return nil, fmt.Errorf("file is too large: exceeds limit %d", maxBytes)
+	}
+	return bytes, nil
 }
 
 func forwardedFrom(origin *models.MessageOrigin) *domain.ForwardInfo {

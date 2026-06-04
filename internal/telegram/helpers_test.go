@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -27,6 +28,29 @@ func TestFormatMemoSavedMessage(t *testing.T) {
 	want := "Content saved as *PRIVATE* with [memo\\_\\[1\\]](https://example.test/memos/abc)"
 	if got != want {
 		t.Fatalf("unexpected message:\nwant: %q\ngot:  %q", want, got)
+	}
+}
+
+func TestTelegramMarkdownParseModeUsesMarkdownV2(t *testing.T) {
+	if string(telegramMarkdownParseMode) != "MarkdownV2" {
+		t.Fatalf("expected MarkdownV2 parse mode, got %q", telegramMarkdownParseMode)
+	}
+}
+
+func TestReadAllLimitedRejectsOversizedReader(t *testing.T) {
+	_, err := readAllLimited(strings.NewReader("abcdef"), 5)
+	if err == nil {
+		t.Fatal("expected oversized reader error")
+	}
+}
+
+func TestReadAllLimitedAllowsReaderAtLimit(t *testing.T) {
+	got, err := readAllLimited(strings.NewReader("abcde"), 5)
+	if err != nil {
+		t.Fatalf("readAllLimited returned error: %v", err)
+	}
+	if string(got) != "abcde" {
+		t.Fatalf("unexpected bytes %q", got)
 	}
 }
 

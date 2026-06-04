@@ -19,6 +19,8 @@ type FileTokenStore struct {
 	userAccessTokenCache sync.Map // map[int64]string
 }
 
+const tokenStoreFileMode os.FileMode = 0o600
+
 func NewFileTokenStore(dataPath string) (*FileTokenStore, error) {
 	store := &FileTokenStore{dataPath: dataPath}
 	if err := store.loadUserAccessTokenMapFromFile(); err != nil {
@@ -84,6 +86,10 @@ func (s *FileTokenStore) saveUserAccessTokenMapToFile() error {
 		return fmt.Errorf("create temp file: %w", err)
 	}
 	defer os.Remove(tmpFile.Name())
+	if err := tmpFile.Chmod(tokenStoreFileMode); err != nil {
+		tmpFile.Close()
+		return fmt.Errorf("secure temp file: %w", err)
+	}
 
 	writer := bufio.NewWriter(tmpFile)
 	for _, entry := range entries {
@@ -115,12 +121,15 @@ func (s *FileTokenStore) loadUserAccessTokenMapFromFile() error {
 		return err
 	}
 	if _, err := os.Stat(s.dataPath); os.IsNotExist(err) {
-		file, err := os.OpenFile(s.dataPath, os.O_CREATE|os.O_WRONLY, 0o644)
+		file, err := os.OpenFile(s.dataPath, os.O_CREATE|os.O_WRONLY, tokenStoreFileMode)
 		if err != nil {
 			return err
 		}
 		file.Close()
 	} else if err != nil {
+		return err
+	}
+	if err := os.Chmod(s.dataPath, tokenStoreFileMode); err != nil {
 		return err
 	}
 
