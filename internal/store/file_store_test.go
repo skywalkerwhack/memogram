@@ -45,6 +45,34 @@ func TestSaveAndLoadUserAccessTokens(t *testing.T) {
 	if !ok || token != "token:two" {
 		t.Fatalf("expected token:two for user 7, got %q", token)
 	}
+
+	info, err := os.Stat(dataPath)
+	if err != nil {
+		t.Fatalf("stat data file: %v", err)
+	}
+	if got := info.Mode().Perm(); got != tokenStoreFileMode {
+		t.Fatalf("expected data file mode %v, got %v", tokenStoreFileMode, got)
+	}
+}
+
+func TestNewFileTokenStoreSecuresExistingDataFile(t *testing.T) {
+	dataPath := filepath.Join(t.TempDir(), "data.txt")
+	if err := os.WriteFile(dataPath, []byte("42:token\n"), 0o644); err != nil {
+		t.Fatalf("write data file: %v", err)
+	}
+
+	_, err := NewFileTokenStore(dataPath)
+	if err != nil {
+		t.Fatalf("init store: %v", err)
+	}
+
+	info, err := os.Stat(dataPath)
+	if err != nil {
+		t.Fatalf("stat data file: %v", err)
+	}
+	if got := info.Mode().Perm(); got != tokenStoreFileMode {
+		t.Fatalf("expected existing data file mode %v, got %v", tokenStoreFileMode, got)
+	}
 }
 
 func TestDeleteUserAccessToken(t *testing.T) {

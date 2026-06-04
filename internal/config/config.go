@@ -11,22 +11,26 @@ import (
 )
 
 type rawConfig struct {
-	ServerAddr       string `env:"SERVER_ADDR,required"`
-	BotToken         string `env:"BOT_TOKEN,required"`
-	BotProxyAddr     string `env:"BOT_PROXY_ADDR"`
-	Data             string `env:"DATA"`
-	AllowedUsernames string `env:"ALLOWED_USERNAMES"`
-	AdminUsernames   string `env:"ADMIN_USERNAMES"`
+	ServerAddr         string `env:"SERVER_ADDR,required"`
+	BotToken           string `env:"BOT_TOKEN,required"`
+	BotProxyAddr       string `env:"BOT_PROXY_ADDR"`
+	Data               string `env:"DATA"`
+	AllowedUsernames   string `env:"ALLOWED_USERNAMES"`
+	AdminUsernames     string `env:"ADMIN_USERNAMES"`
+	MaxAttachmentBytes int64  `env:"MAX_ATTACHMENT_BYTES"`
 }
 
 type Config struct {
-	ServerAddr       string
-	BotToken         string
-	BotProxyAddr     string
-	Data             string
-	AllowedUsernames []string
-	AdminUsernames   []string
+	ServerAddr         string
+	BotToken           string
+	BotProxyAddr       string
+	Data               string
+	AllowedUsernames   []string
+	AdminUsernames     []string
+	MaxAttachmentBytes int64
 }
+
+const DefaultMaxAttachmentBytes int64 = 20 * 1024 * 1024
 
 func Load() (*Config, error) {
 	const envFileName = ".env"
@@ -57,13 +61,22 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("access config file %s: %w", absDataPath, err)
 	}
 
+	maxAttachmentBytes := raw.MaxAttachmentBytes
+	if maxAttachmentBytes == 0 {
+		maxAttachmentBytes = DefaultMaxAttachmentBytes
+	}
+	if maxAttachmentBytes < 0 {
+		return nil, fmt.Errorf("MAX_ATTACHMENT_BYTES must be greater than or equal to 0")
+	}
+
 	return &Config{
-		ServerAddr:       normalizeBaseURL(raw.ServerAddr),
-		BotToken:         raw.BotToken,
-		BotProxyAddr:     raw.BotProxyAddr,
-		Data:             absDataPath,
-		AllowedUsernames: parseAllowedUsernames(raw.AllowedUsernames),
-		AdminUsernames:   parseAllowedUsernames(raw.AdminUsernames),
+		ServerAddr:         normalizeBaseURL(raw.ServerAddr),
+		BotToken:           raw.BotToken,
+		BotProxyAddr:       raw.BotProxyAddr,
+		Data:               absDataPath,
+		AllowedUsernames:   parseAllowedUsernames(raw.AllowedUsernames),
+		AdminUsernames:     parseAllowedUsernames(raw.AdminUsernames),
+		MaxAttachmentBytes: maxAttachmentBytes,
 	}, nil
 }
 

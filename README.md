@@ -61,6 +61,7 @@ SERVER_ADDR=dns:localhost:5230
 BOT_TOKEN=your_telegram_bot_token
 BOT_PROXY_ADDR=
 DATA=data.txt
+MAX_ATTACHMENT_BYTES=20971520
 ALLOWED_USERNAMES=
 ADMIN_USERNAMES=
 ```
@@ -71,6 +72,7 @@ ADMIN_USERNAMES=
 - `BOT_TOKEN`: Telegram bot token.
 - `BOT_PROXY_ADDR`: optional Telegram Bot API server URL or proxy endpoint.
 - `DATA`: path to the local token storage file. Default: `data.txt`.
+- `MAX_ATTACHMENT_BYTES`: maximum Telegram attachment size to download into memory. Default: `20971520` (20 MiB).
 - `ALLOWED_USERNAMES`: optional comma-separated allowlist of Telegram usernames. If empty, any Telegram username can use the bot.
 - `ADMIN_USERNAMES`: optional comma-separated list of Telegram usernames allowed to use `/ping`. If empty, diagnostic `/ping` is unavailable.
 
@@ -143,7 +145,7 @@ Artifacts are written to `build/`.
 
 ## Notes
 
-- The token store is a plain local file managed by the bot. Protect it like a secret.
+- The token store is a plain local file managed by the bot and is written with `0600` permissions. Protect it like a secret.
 - If `ALLOWED_USERNAMES` is set, users without a Telegram username cannot use the bot.
 - If `ADMIN_USERNAMES` is empty, `/ping` diagnostics are disabled for everyone.
 - Media albums are grouped so multiple items from the same Telegram media group attach to a single memo.

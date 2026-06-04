@@ -13,6 +13,8 @@ import (
 	"github.com/skywalkerwhack/memogram/internal/config"
 )
 
+const telegramMarkdownParseMode = models.ParseModeMarkdown
+
 type Bot struct {
 	bot        *bot.Bot
 	service    Service

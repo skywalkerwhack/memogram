@@ -45,6 +45,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	unsetEnv(t, "DATA")
 	unsetEnv(t, "ALLOWED_USERNAMES")
 	unsetEnv(t, "ADMIN_USERNAMES")
+	unsetEnv(t, "MAX_ATTACHMENT_BYTES")
 
 	t.Setenv("SERVER_ADDR", "dns:localhost:5230")
 	t.Setenv("BOT_TOKEN", "bot-token")
@@ -52,6 +53,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	t.Setenv("DATA", "tokens.txt")
 	t.Setenv("ALLOWED_USERNAMES", "Alice,bob")
 	t.Setenv("ADMIN_USERNAMES", "Root")
+	t.Setenv("MAX_ATTACHMENT_BYTES", "1048576")
 
 	cfg, err := Load()
 	if err != nil {
@@ -76,6 +78,9 @@ func TestLoadFromEnvironment(t *testing.T) {
 	if want := []string{"root"}; !reflect.DeepEqual(cfg.AdminUsernames, want) {
 		t.Fatalf("expected admin usernames %v, got %v", want, cfg.AdminUsernames)
 	}
+	if cfg.MaxAttachmentBytes != 1048576 {
+		t.Fatalf("unexpected max attachment bytes %d", cfg.MaxAttachmentBytes)
+	}
 }
 
 func TestLoadFromDotEnvAndDefaultDataPath(t *testing.T) {
@@ -87,6 +92,7 @@ func TestLoadFromDotEnvAndDefaultDataPath(t *testing.T) {
 	unsetEnv(t, "DATA")
 	unsetEnv(t, "ALLOWED_USERNAMES")
 	unsetEnv(t, "ADMIN_USERNAMES")
+	unsetEnv(t, "MAX_ATTACHMENT_BYTES")
 
 	envContent := "SERVER_ADDR=https://memos.example.test\nBOT_TOKEN=dotenv-token\nALLOWED_USERNAMES=alice\n"
 	if err := os.WriteFile(filepath.Join(tempDir, ".env"), []byte(envContent), 0o644); err != nil {
@@ -107,6 +113,9 @@ func TestLoadFromDotEnvAndDefaultDataPath(t *testing.T) {
 	if !strings.HasSuffix(cfg.Data, string(filepath.Separator)+"data.txt") {
 		t.Fatalf("expected default data.txt path, got %q", cfg.Data)
 	}
+	if cfg.MaxAttachmentBytes != DefaultMaxAttachmentBytes {
+		t.Fatalf("unexpected default max attachment bytes %d", cfg.MaxAttachmentBytes)
+	}
 }
 
 func TestLoadRejectsDirectoryDataPath(t *testing.T) {
@@ -118,6 +127,7 @@ func TestLoadRejectsDirectoryDataPath(t *testing.T) {
 	unsetEnv(t, "DATA")
 	unsetEnv(t, "ALLOWED_USERNAMES")
 	unsetEnv(t, "ADMIN_USERNAMES")
+	unsetEnv(t, "MAX_ATTACHMENT_BYTES")
 
 	dataDir := filepath.Join(tempDir, "store")
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
@@ -133,6 +143,30 @@ func TestLoadRejectsDirectoryDataPath(t *testing.T) {
 		t.Fatal("expected error for directory data path")
 	}
 	if !strings.Contains(err.Error(), "cannot be a directory") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadRejectsNegativeMaxAttachmentBytes(t *testing.T) {
+	tempDir := t.TempDir()
+	restoreCWD(t, tempDir)
+	unsetEnv(t, "SERVER_ADDR")
+	unsetEnv(t, "BOT_TOKEN")
+	unsetEnv(t, "BOT_PROXY_ADDR")
+	unsetEnv(t, "DATA")
+	unsetEnv(t, "ALLOWED_USERNAMES")
+	unsetEnv(t, "ADMIN_USERNAMES")
+	unsetEnv(t, "MAX_ATTACHMENT_BYTES")
+
+	t.Setenv("SERVER_ADDR", "localhost:5230")
+	t.Setenv("BOT_TOKEN", "bot-token")
+	t.Setenv("MAX_ATTACHMENT_BYTES", "-1")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for negative max attachment bytes")
+	}
+	if !strings.Contains(err.Error(), "MAX_ATTACHMENT_BYTES") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
