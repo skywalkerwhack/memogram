@@ -4,9 +4,12 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/skywalkerwhack/memogram/internal/domain"
 )
+
+const mediaGroupCacheTTL = 10 * time.Minute
 
 type Service struct {
 	backend Backend
@@ -21,6 +24,11 @@ type Service struct {
 	mediaGroupMutex sync.Mutex
 
 	instanceProfile *domain.InstanceProfile
+}
+
+type mediaGroupCacheEntry struct {
+	memo      *domain.Memo
+	expiresAt time.Time
 }
 
 func NewService(backend Backend, store TokenStore, dataFile string, allowedUsernames []string, adminUsernames []string) *Service {
