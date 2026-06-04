@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/skywalkerwhack/memogram/internal/domain"
 )
@@ -237,6 +238,34 @@ func TestServiceCreateMemoUsesMediaGroupCache(t *testing.T) {
 	}
 	if first != second {
 		t.Fatal("expected cached memo pointer to be reused")
+	}
+}
+
+func TestServiceCreateMemoDeletesExpiredMediaGroupCacheEntries(t *testing.T) {
+	store := &fakeTokenStore{tokens: map[int64]string{7: "token"}}
+	service := NewService(fakeBackend{
+		baseURL: "https://example.test",
+		createMemo: func(context.Context, string, string) (*domain.Memo, error) {
+			return &domain.Memo{Name: "memos/1"}, nil
+		},
+	}, store, "data.txt", nil, nil)
+
+	service.mediaGroupCache.Store("old-album", mediaGroupCacheEntry{
+		memo:      &domain.Memo{Name: "memos/old"},
+		expiresAt: time.Now().Add(-time.Minute),
+	})
+
+	_, err := service.CreateMemo(context.Background(), CreateMemoInput{
+		UserID:        7,
+		Content:       "new",
+		AttachmentSet: "new-album",
+	})
+	if err != nil {
+		t.Fatalf("CreateMemo returned error: %v", err)
+	}
+
+	if _, ok := service.mediaGroupCache.Load("old-album"); ok {
+		t.Fatal("expected expired media group cache entry to be deleted")
 	}
 }
 
