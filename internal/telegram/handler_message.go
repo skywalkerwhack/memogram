@@ -101,7 +101,7 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 
 	t.bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:              message.Chat.ID,
-		Text:                formatMemoSavedMessage(memo.Visibility, memo.Name, t.service.MemoBaseURL(), memoUID),
+		Text:                formatMemoSavedMessage(memo.Visibility, t.service.MemoBaseURL(), memoUID),
 		ParseMode:           telegramMarkdownParseMode,
 		DisableNotification: true,
 		ReplyParameters: &models.ReplyParameters{
@@ -111,11 +111,11 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 	})
 }
 
-func formatMemoSavedMessage(visibility domain.Visibility, memoName string, baseURL string, memoUID string) string {
+func formatMemoSavedMessage(visibility domain.Visibility, baseURL string, memoUID string) string {
 	return fmt.Sprintf(
-		"Content saved as *%s* with [%s](%s)",
+		"Saved\nVisibility: *%s*\n[%s](%s)",
 		escapeMarkdownV2(string(visibility)),
-		escapeMarkdownV2(memoName),
+		escapeMarkdownV2("Open memo"),
 		escapeMarkdownV2URL(strings.TrimRight(baseURL, "/")+"/memos/"+memoUID),
 	)
 }

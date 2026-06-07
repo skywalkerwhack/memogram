@@ -24,10 +24,24 @@ func TestKeyboard(t *testing.T) {
 }
 
 func TestFormatMemoSavedMessage(t *testing.T) {
-	got := formatMemoSavedMessage(domain.VisibilityPrivate, "memo_[1]", "https://example.test/", "abc")
-	want := "Content saved as *PRIVATE* with [memo\\_\\[1\\]](https://example.test/memos/abc)"
+	got := formatMemoSavedMessage(domain.VisibilityPrivate, "https://example.test/", "abc")
+	want := "Saved\nVisibility: *PRIVATE*\n[Open memo](https://example.test/memos/abc)"
 	if got != want {
 		t.Fatalf("unexpected message:\nwant: %q\ngot:  %q", want, got)
+	}
+}
+
+func TestStartUsageMessage(t *testing.T) {
+	got := startUsageMessage()
+	for _, want := range []string{
+		"Connect Memogram to your Memos account",
+		"Create an access token.",
+		"/start <access_token>",
+		"stored locally",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected start usage message to contain %q, got %q", want, got)
+		}
 	}
 }
 
