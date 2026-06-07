@@ -52,7 +52,7 @@ func (t *Bot) startHandler(ctx context.Context, update *models.Update) {
 	if accessToken == "" {
 		t.bot.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   "Usage: /start <access_token>",
+			Text:   startUsageMessage(),
 		})
 		return
 	}
@@ -74,6 +74,19 @@ func (t *Bot) startHandler(ctx context.Context, update *models.Update) {
 		ChatID: update.Message.Chat.ID,
 		Text:   fmt.Sprintf("Hello %s!", displayName),
 	})
+}
+
+func startUsageMessage() string {
+	return strings.Join([]string{
+		"Connect Memogram to your Memos account",
+		"",
+		"1. Open your Memos account settings.",
+		"2. Create an access token.",
+		"3. Send it here like this:",
+		"/start <access_token>",
+		"",
+		"Your token is stored locally by this bot and used only to save memos for your Telegram account.",
+	}, "\n")
 }
 
 func (t *Bot) helpHandler(ctx context.Context, update *models.Update) {
