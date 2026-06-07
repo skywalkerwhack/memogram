@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/skywalkerwhack/memogram/internal/domain"
@@ -10,7 +11,10 @@ import (
 func (s *Service) LinkAccount(ctx context.Context, telegramUserID int64, accessToken string) (string, error) {
 	user, err := s.backend.GetCurrentUser(ctx, accessToken)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", domain.ErrInvalidToken, err)
+		if errors.Is(err, domain.ErrInvalidToken) {
+			return "", fmt.Errorf("%w: %v", domain.ErrInvalidToken, err)
+		}
+		return "", err
 	}
 	if err := s.store.SetUserAccessToken(telegramUserID, accessToken); err != nil {
 		return "", fmt.Errorf("save access token: %w", err)

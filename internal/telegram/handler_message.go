@@ -50,16 +50,9 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 
 	memo, err := t.service.CreateMemo(ctx, input)
 	if err != nil {
-		if errors.Is(err, domain.ErrAccountNotLinked) {
-			t.bot.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID: message.Chat.ID,
-				Text:   "Please start the bot with /start <access_token>",
-			})
-			return
-		}
 		t.bot.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID: message.Chat.ID,
-			Text:   "Failed to create memo",
+			Text:   memoCreateErrorMessage(err),
 		})
 		return
 	}
@@ -81,11 +74,17 @@ func (t *Bot) handleMessage(ctx context.Context, update *models.Update) {
 	for _, fileID := range fileIDs {
 		payload, err := t.fetchFilePayload(ctx, fileID)
 		if err != nil {
-			t.sendError(message.Chat.ID, fmt.Errorf("failed to get file: %w", err))
+			t.bot.SendMessage(ctx, &bot.SendMessageParams{
+				ChatID: message.Chat.ID,
+				Text:   attachmentDownloadErrorMessage(err, t.config.MaxAttachmentBytes),
+			})
 			return
 		}
 		if err := t.service.AttachFile(ctx, message.From.ID, memo.Name, payload); err != nil {
-			t.sendError(message.Chat.ID, fmt.Errorf("failed to save attachment: %w", err))
+			t.bot.SendMessage(ctx, &bot.SendMessageParams{
+				ChatID: message.Chat.ID,
+				Text:   attachmentSaveErrorMessage(err),
+			})
 			return
 		}
 	}
@@ -120,14 +119,52 @@ func formatMemoSavedMessage(visibility domain.Visibility, baseURL string, memoUI
 	)
 }
 
+var (
+	errAttachmentTooLarge     = errors.New("attachment too large")
+	errTelegramDownloadFailed = errors.New("telegram download failed")
+)
+
+func memoCreateErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, domain.ErrAccountNotLinked):
+		return accountNotLinkedMessage()
+	case errors.Is(err, domain.ErrInvalidToken):
+		return invalidTokenMessage()
+	case errors.Is(err, domain.ErrBackendUnavailable):
+		return memosUnavailableMessage()
+	default:
+		return memosUnavailableMessage()
+	}
+}
+
+func attachmentSaveErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, domain.ErrAccountNotLinked):
+		return accountNotLinkedMessage()
+	case errors.Is(err, domain.ErrInvalidToken):
+		return invalidTokenMessage()
+	case errors.Is(err, domain.ErrBackendUnavailable):
+		return memosUnavailableMessage()
+	default:
+		return "I saved the memo, but could not upload the attachment to Memos. Please try sending the file again."
+	}
+}
+
+func attachmentDownloadErrorMessage(err error, maxBytes int64) string {
+	if errors.Is(err, errAttachmentTooLarge) {
+		return attachmentTooLargeMessage(maxBytes)
+	}
+	return "Telegram could not provide that file right now. Please try again in a moment."
+}
+
 func (t *Bot) fetchFilePayload(ctx context.Context, fileID string) (domain.FilePayload, error) {
 	file, err := t.bot.GetFile(ctx, &bot.GetFileParams{FileID: fileID})
 	if err != nil {
-		return domain.FilePayload{}, err
+		return domain.FilePayload{}, fmt.Errorf("%w: %v", errTelegramDownloadFailed, err)
 	}
 	maxBytes := t.config.MaxAttachmentBytes
 	if maxBytes > 0 && file.FileSize > maxBytes {
-		return domain.FilePayload{}, fmt.Errorf("file is too large: %d bytes exceeds limit %d", file.FileSize, maxBytes)
+		return domain.FilePayload{}, fmt.Errorf("%w: %d bytes exceeds limit %d", errAttachmentTooLarge, file.FileSize, maxBytes)
 	}
 
 	fileLink := t.bot.FileDownloadLink(file)
@@ -138,20 +175,23 @@ func (t *Bot) fetchFilePayload(ctx context.Context, fileID string) (domain.FileP
 
 	response, err := t.httpClient.Do(req)
 	if err != nil {
-		return domain.FilePayload{}, fmt.Errorf("download file: %w", err)
+		return domain.FilePayload{}, fmt.Errorf("%w: %v", errTelegramDownloadFailed, err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusBadRequest {
-		return domain.FilePayload{}, fmt.Errorf("download failed with status %s", response.Status)
+		return domain.FilePayload{}, fmt.Errorf("%w: status %s", errTelegramDownloadFailed, response.Status)
 	}
 	if maxBytes > 0 && response.ContentLength > maxBytes {
-		return domain.FilePayload{}, fmt.Errorf("file is too large: %d bytes exceeds limit %d", response.ContentLength, maxBytes)
+		return domain.FilePayload{}, fmt.Errorf("%w: %d bytes exceeds limit %d", errAttachmentTooLarge, response.ContentLength, maxBytes)
 	}
 
 	bytes, err := readAllLimited(response.Body, maxBytes)
 	if err != nil {
-		return domain.FilePayload{}, fmt.Errorf("read file: %w", err)
+		if errors.Is(err, errAttachmentTooLarge) {
+			return domain.FilePayload{}, err
+		}
+		return domain.FilePayload{}, fmt.Errorf("%w: %v", errTelegramDownloadFailed, err)
 	}
 
 	contentType := response.Header.Get("Content-Type")
@@ -179,7 +219,7 @@ func readAllLimited(reader io.Reader, maxBytes int64) ([]byte, error) {
 		return nil, err
 	}
 	if int64(len(bytes)) > maxBytes {
-		return nil, fmt.Errorf("file is too large: exceeds limit %d", maxBytes)
+		return nil, fmt.Errorf("%w: exceeds limit %d", errAttachmentTooLarge, maxBytes)
 	}
 	return bytes, nil
 }

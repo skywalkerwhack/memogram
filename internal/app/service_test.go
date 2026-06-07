@@ -160,7 +160,7 @@ func TestServiceLinkAccountInvalidToken(t *testing.T) {
 	service := NewService(fakeBackend{
 		baseURL: "https://example.test",
 		getCurrentUser: func(context.Context, string) (*domain.User, error) {
-			return nil, errors.New("unauthorized")
+			return nil, domain.ErrInvalidToken
 		},
 	}, &fakeTokenStore{}, "data.txt", nil, nil)
 
@@ -320,7 +320,7 @@ func TestServiceSearchMemosInvalidToken(t *testing.T) {
 	service := NewService(fakeBackend{
 		baseURL: "https://example.test",
 		getCurrentUser: func(context.Context, string) (*domain.User, error) {
-			return nil, errors.New("unauthorized")
+			return nil, domain.ErrInvalidToken
 		},
 	}, store, "data.txt", nil, nil)
 
