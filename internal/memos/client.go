@@ -35,7 +35,7 @@ func (b *Backend) BaseURL() string {
 func (b *Backend) GetInstanceProfile(ctx context.Context) (*domain.InstanceProfile, error) {
 	resp, err := b.newClient("").InstanceService.GetInstanceProfile(ctx, connect.NewRequest(&v1pb.GetInstanceProfileRequest{}))
 	if err != nil {
-		return nil, err
+		return nil, wrapBackendError(err)
 	}
 	return &domain.InstanceProfile{InstanceURL: resp.Msg.GetInstanceUrl()}, nil
 }
@@ -43,7 +43,7 @@ func (b *Backend) GetInstanceProfile(ctx context.Context) (*domain.InstanceProfi
 func (b *Backend) GetCurrentUser(ctx context.Context, accessToken string) (*domain.User, error) {
 	resp, err := b.newClient(accessToken).AuthService.GetCurrentUser(ctx, connect.NewRequest(&v1pb.GetCurrentUserRequest{}))
 	if err != nil {
-		return nil, err
+		return nil, wrapBackendError(err)
 	}
 	user := resp.Msg.GetUser()
 	if user == nil {
@@ -61,7 +61,7 @@ func (b *Backend) CreateMemo(ctx context.Context, accessToken string, content st
 		Memo: &v1pb.Memo{Content: content},
 	}))
 	if err != nil {
-		return nil, err
+		return nil, wrapBackendError(err)
 	}
 	return memoFromProto(resp.Msg), nil
 }
@@ -69,7 +69,7 @@ func (b *Backend) CreateMemo(ctx context.Context, accessToken string, content st
 func (b *Backend) GetMemo(ctx context.Context, accessToken string, name string) (*domain.Memo, error) {
 	resp, err := b.newClient(accessToken).MemoService.GetMemo(ctx, connect.NewRequest(&v1pb.GetMemoRequest{Name: name}))
 	if err != nil {
-		return nil, err
+		return nil, wrapBackendError(err)
 	}
 	return memoFromProto(resp.Msg), nil
 }
@@ -85,7 +85,7 @@ func (b *Backend) UpdateMemo(ctx context.Context, accessToken string, memo *doma
 		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"visibility", "pinned"}},
 	}))
 	if err != nil {
-		return nil, err
+		return nil, wrapBackendError(err)
 	}
 	return memoFromProto(resp.Msg), nil
 }
@@ -95,7 +95,7 @@ func (b *Backend) DeleteMemo(ctx context.Context, accessToken string, name strin
 		Name:  name,
 		Force: true,
 	}))
-	return err
+	return wrapBackendError(err)
 }
 
 func (b *Backend) SearchMemos(ctx context.Context, accessToken string, query string, creatorID *int64, limit int) ([]domain.Memo, error) {
@@ -109,7 +109,7 @@ func (b *Backend) SearchMemos(ctx context.Context, accessToken string, query str
 		Filter:   filter,
 	}))
 	if err != nil {
-		return nil, err
+		return nil, wrapBackendError(err)
 	}
 
 	memos := make([]domain.Memo, 0, len(resp.Msg.GetMemos()))
@@ -129,7 +129,22 @@ func (b *Backend) UploadAttachment(ctx context.Context, accessToken string, memo
 			Memo:     &memoName,
 		},
 	}))
-	return err
+	return wrapBackendError(err)
+}
+
+func wrapBackendError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	switch connect.CodeOf(err) {
+	case connect.CodeUnauthenticated:
+		return fmt.Errorf("%w: %v", domain.ErrInvalidToken, err)
+	case connect.CodeDeadlineExceeded, connect.CodeUnavailable:
+		return fmt.Errorf("%w: %v", domain.ErrBackendUnavailable, err)
+	default:
+		return err
+	}
 }
 
 type client struct {

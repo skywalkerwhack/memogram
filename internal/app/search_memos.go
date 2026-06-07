@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -16,7 +17,10 @@ func (s *Service) SearchMemos(ctx context.Context, telegramUserID int64, query s
 
 	user, err := s.backend.GetCurrentUser(ctx, accessToken)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", domain.ErrInvalidToken, err)
+		if errors.Is(err, domain.ErrInvalidToken) {
+			return nil, fmt.Errorf("%w: %v", domain.ErrInvalidToken, err)
+		}
+		return nil, err
 	}
 
 	var creatorID *int64

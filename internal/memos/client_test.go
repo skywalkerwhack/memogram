@@ -1,11 +1,13 @@
 package memos
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/skywalkerwhack/memogram/internal/domain"
 	v1pb "github.com/usememos/memos/proto/gen/api/v1"
 )
@@ -98,5 +100,17 @@ func TestVisibilityMappings(t *testing.T) {
 	}
 	if got := visibilityToProto(domain.VisibilityPrivate); got != v1pb.Visibility_PRIVATE {
 		t.Fatalf("expected private proto visibility, got %v", got)
+	}
+}
+
+func TestWrapBackendErrorMapsConnectCodes(t *testing.T) {
+	invalidTokenErr := wrapBackendError(connect.NewError(connect.CodeUnauthenticated, errors.New("bad token")))
+	if !errors.Is(invalidTokenErr, domain.ErrInvalidToken) {
+		t.Fatalf("expected ErrInvalidToken, got %v", invalidTokenErr)
+	}
+
+	unavailableErr := wrapBackendError(connect.NewError(connect.CodeUnavailable, errors.New("offline")))
+	if !errors.Is(unavailableErr, domain.ErrBackendUnavailable) {
+		t.Fatalf("expected ErrBackendUnavailable, got %v", unavailableErr)
 	}
 }

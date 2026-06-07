@@ -141,23 +141,10 @@ func (t *Bot) searchHandler(ctx context.Context, update *models.Update) {
 
 	memos, err := t.service.SearchMemos(ctx, update.Message.From.ID, searchString, 10)
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrAccountNotLinked):
-			t.bot.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID: update.Message.Chat.ID,
-				Text:   "Please start the bot with /start <access_token>",
-			})
-		case errors.Is(err, domain.ErrInvalidToken):
-			t.bot.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID: update.Message.Chat.ID,
-				Text:   "Invalid access token",
-			})
-		default:
-			t.bot.SendMessage(ctx, &bot.SendMessageParams{
-				ChatID: update.Message.Chat.ID,
-				Text:   "Failed to search memos",
-			})
-		}
+		t.bot.SendMessage(ctx, &bot.SendMessageParams{
+			ChatID: update.Message.Chat.ID,
+			Text:   memoSearchErrorMessage(err),
+		})
 		return
 	}
 
@@ -175,6 +162,54 @@ func (t *Bot) searchHandler(ctx context.Context, update *models.Update) {
 			Text:   memo.Name + "\n" + memo.Content,
 		})
 	}
+}
+
+func memoSearchErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, domain.ErrAccountNotLinked):
+		return accountNotLinkedMessage()
+	case errors.Is(err, domain.ErrInvalidToken):
+		return invalidTokenMessage()
+	case errors.Is(err, domain.ErrBackendUnavailable):
+		return memosUnavailableMessage()
+	default:
+		return memosUnavailableMessage()
+	}
+}
+
+func accountNotLinkedMessage() string {
+	return "Please connect your Memos account first with /start <access_token>."
+}
+
+func invalidTokenMessage() string {
+	return "Your Memos access token no longer works. Send /start <access_token> to reconnect."
+}
+
+func memosUnavailableMessage() string {
+	return "I could not reach your Memos server. Check that Memos is running, then try again."
+}
+
+func attachmentTooLargeMessage(maxBytes int64) string {
+	if maxBytes <= 0 {
+		return "That attachment is too large to process."
+	}
+	return fmt.Sprintf("That attachment is too large. The current limit is %s.", formatByteSize(maxBytes))
+}
+
+func formatByteSize(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+
+	value := float64(bytes)
+	for _, suffix := range []string{"KiB", "MiB", "GiB"} {
+		value /= unit
+		if value < unit {
+			return fmt.Sprintf("%.1f %s", value, suffix)
+		}
+	}
+	return fmt.Sprintf("%.1f TiB", value/unit)
 }
 
 func (t *Bot) accountHandler(ctx context.Context, update *models.Update) {

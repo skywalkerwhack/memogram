@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -42,6 +43,51 @@ func TestStartUsageMessage(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected start usage message to contain %q, got %q", want, got)
 		}
+	}
+}
+
+func TestMemoSearchErrorMessage(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{
+			name: "not linked",
+			err:  domain.ErrAccountNotLinked,
+			want: "connect your Memos account",
+		},
+		{
+			name: "invalid token",
+			err:  domain.ErrInvalidToken,
+			want: "access token no longer works",
+		},
+		{
+			name: "backend unavailable",
+			err:  domain.ErrBackendUnavailable,
+			want: "could not reach your Memos server",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := memoSearchErrorMessage(tt.err)
+			if !strings.Contains(got, tt.want) {
+				t.Fatalf("expected %q to contain %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAttachmentDownloadErrorMessage(t *testing.T) {
+	got := attachmentDownloadErrorMessage(errAttachmentTooLarge, 20*1024*1024)
+	if !strings.Contains(got, "20.0 MiB") {
+		t.Fatalf("expected size limit in message, got %q", got)
+	}
+
+	got = attachmentDownloadErrorMessage(errors.New("network"), 20*1024*1024)
+	if !strings.Contains(got, "Please try again in a moment") {
+		t.Fatalf("expected retry guidance, got %q", got)
 	}
 }
 
