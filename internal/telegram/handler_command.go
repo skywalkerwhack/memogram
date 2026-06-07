@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	commandStart  = "/start"
-	commandHelp   = "/help"
-	commandUnlink = "/unlink"
-	commandSearch = "/search"
+	commandStart   = "/start"
+	commandHelp    = "/help"
+	commandUnlink  = "/unlink"
+	commandSearch  = "/search"
 	commandAccount = "/account"
 	commandMe      = "/me"
-	commandPing   = "/ping"
+	commandPing    = "/ping"
 )
 
 func (t *Bot) handleCommand(ctx context.Context, update *models.Update) bool {

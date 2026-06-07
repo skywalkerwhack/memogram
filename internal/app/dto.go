@@ -32,11 +32,11 @@ type StatusReport struct {
 type HealthReport struct {
 	ServerURL        string
 	DataFile         string
-	BackendLatency     time.Duration
-	BackendAvailable   bool
-	BackendError       string
-	InstanceURL        string
-	AllowedUsernames   int
-	AdminUsernames     int
-	LinkedUsers        int
+	BackendLatency   time.Duration
+	BackendAvailable bool
+	BackendError     string
+	InstanceURL      string
+	AllowedUsernames int
+	AdminUsernames   int
+	LinkedUsers      int
 }
