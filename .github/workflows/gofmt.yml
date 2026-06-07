@@ -1,9 +1,6 @@
 name: Gofmt
 
 on:
-  push:
-    branches-ignore:
-      - main
   workflow_dispatch:
 
 permissions:
