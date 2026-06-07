@@ -59,6 +59,24 @@ func TestStartUsageMessage(t *testing.T) {
 	}
 }
 
+func TestHelpMessageGroupsCommandsByTask(t *testing.T) {
+	got := helpMessage()
+	for _, want := range []string{
+		"Save",
+		"Search",
+		"Account",
+		"Admin",
+		"/search words",
+		"/account",
+		"/unlink",
+		"/ping",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected help message to contain %q, got %q", want, got)
+		}
+	}
+}
+
 func TestMemoSearchErrorMessage(t *testing.T) {
 	tests := []struct {
 		name string

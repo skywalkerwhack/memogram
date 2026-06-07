@@ -90,23 +90,33 @@ func startUsageMessage() string {
 }
 
 func (t *Bot) helpHandler(ctx context.Context, update *models.Update) {
-	lines := []string{
-		"Memogram commands",
-		"/start <access_token> - link this Telegram account to Memos",
-		"/unlink - remove the saved Memos token for this Telegram account",
-		"/search <words> - search your saved memos",
-		"/account - show your current Memos account link",
-		"/me - alias of /account",
-		"/ping - show admin-only backend diagnostics",
-		"/help - show this help message",
-		"",
-		"Send text, photos, voice messages, videos, or documents to save them as memos.",
-	}
-
 	t.bot.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
-		Text:   strings.Join(lines, "\n"),
+		Text:   helpMessage(),
 	})
+}
+
+func helpMessage() string {
+	return strings.Join([]string{
+		"Memogram help",
+		"",
+		"Save",
+		"Send text, photos, voice messages, videos, or documents. I will save them to Memos.",
+		"",
+		"Search",
+		"Use /search words to find saved memos.",
+		"",
+		"Account",
+		"Use /account to check your connection.",
+		"Use /start <access_token> to connect or refresh your token.",
+		"Use /unlink to disconnect this Telegram account.",
+		"",
+		"Admin",
+		"Use /ping to check backend diagnostics if you are an admin.",
+		"",
+		"Help",
+		"Use /help to show this message again.",
+	}, "\n")
 }
 
 func (t *Bot) unlinkHandler(ctx context.Context, update *models.Update) {
