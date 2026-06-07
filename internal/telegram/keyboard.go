@@ -7,6 +7,12 @@ import (
 	"github.com/skywalkerwhack/memogram/internal/domain"
 )
 
+const (
+	callbackDeletePrompt  = "delete_prompt"
+	callbackDeleteConfirm = "delete_confirm"
+	callbackDeleteCancel  = "delete_cancel"
+)
+
 func keyboard(memo *domain.Memo) *models.InlineKeyboardMarkup {
 	return &models.InlineKeyboardMarkup{
 		InlineKeyboard: [][]models.InlineKeyboardButton{
@@ -16,7 +22,18 @@ func keyboard(memo *domain.Memo) *models.InlineKeyboardMarkup {
 				{Text: "Pin", CallbackData: fmt.Sprintf("pin %s", memo.Name)},
 			},
 			{
-				{Text: "Delete", CallbackData: fmt.Sprintf("delete %s", memo.Name)},
+				{Text: "Delete", CallbackData: fmt.Sprintf("%s %s", callbackDeletePrompt, memo.Name)},
+			},
+		},
+	}
+}
+
+func deleteConfirmationKeyboard(memoName string) *models.InlineKeyboardMarkup {
+	return &models.InlineKeyboardMarkup{
+		InlineKeyboard: [][]models.InlineKeyboardButton{
+			{
+				{Text: "Confirm delete", CallbackData: fmt.Sprintf("%s %s", callbackDeleteConfirm, memoName)},
+				{Text: "Cancel", CallbackData: fmt.Sprintf("%s %s", callbackDeleteCancel, memoName)},
 			},
 		},
 	}

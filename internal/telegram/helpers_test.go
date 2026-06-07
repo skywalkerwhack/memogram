@@ -19,8 +19,21 @@ func TestKeyboard(t *testing.T) {
 	if got := markup.InlineKeyboard[0][0].CallbackData; got != "public memos/77" {
 		t.Fatalf("unexpected callback data %q", got)
 	}
-	if got := markup.InlineKeyboard[1][0].CallbackData; got != "delete memos/77" {
+	if got := markup.InlineKeyboard[1][0].CallbackData; got != "delete_prompt memos/77" {
 		t.Fatalf("unexpected delete callback %q", got)
+	}
+}
+
+func TestDeleteConfirmationKeyboard(t *testing.T) {
+	markup := deleteConfirmationKeyboard("memos/77")
+	if len(markup.InlineKeyboard) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(markup.InlineKeyboard))
+	}
+	if got := markup.InlineKeyboard[0][0].CallbackData; got != "delete_confirm memos/77" {
+		t.Fatalf("unexpected confirm callback %q", got)
+	}
+	if got := markup.InlineKeyboard[0][1].CallbackData; got != "delete_cancel memos/77" {
+		t.Fatalf("unexpected cancel callback %q", got)
 	}
 }
 

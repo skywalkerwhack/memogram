@@ -24,7 +24,19 @@ func (t *Bot) handleCallbackQuery(ctx context.Context, b *bot.Bot, update *model
 		return
 	}
 
-	action, memoName := app.MemoAction(parts[0]), parts[1]
+	command, memoName := parts[0], parts[1]
+	switch command {
+	case callbackDeletePrompt:
+		t.showDeleteConfirmation(ctx, b, update, memoName)
+		return
+	case callbackDeleteCancel:
+		t.cancelDeleteConfirmation(ctx, b, update, memoName)
+		return
+	case callbackDeleteConfirm:
+		command = string(app.ActionDelete)
+	}
+
+	action := app.MemoAction(command)
 	memo, deleted, err := t.service.UpdateMemoAction(ctx, update.CallbackQuery.From.ID, action, memoName)
 	if err != nil {
 		switch {
@@ -82,6 +94,30 @@ func (t *Bot) handleCallbackQuery(ctx context.Context, b *bot.Bot, update *model
 	b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
 		CallbackQueryID: update.CallbackQuery.ID,
 		Text:            "Memo updated",
+	})
+}
+
+func (t *Bot) showDeleteConfirmation(ctx context.Context, b *bot.Bot, update *models.Update, memoName string) {
+	b.EditMessageReplyMarkup(ctx, &bot.EditMessageReplyMarkupParams{
+		ChatID:      update.CallbackQuery.Message.Message.Chat.ID,
+		MessageID:   update.CallbackQuery.Message.Message.ID,
+		ReplyMarkup: deleteConfirmationKeyboard(memoName),
+	})
+	b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+		CallbackQueryID: update.CallbackQuery.ID,
+		Text:            "Confirm delete?",
+	})
+}
+
+func (t *Bot) cancelDeleteConfirmation(ctx context.Context, b *bot.Bot, update *models.Update, memoName string) {
+	b.EditMessageReplyMarkup(ctx, &bot.EditMessageReplyMarkupParams{
+		ChatID:      update.CallbackQuery.Message.Message.Chat.ID,
+		MessageID:   update.CallbackQuery.Message.Message.ID,
+		ReplyMarkup: keyboard(&domain.Memo{Name: memoName}),
+	})
+	b.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+		CallbackQueryID: update.CallbackQuery.ID,
+		Text:            "Delete canceled",
 	})
 }
 
